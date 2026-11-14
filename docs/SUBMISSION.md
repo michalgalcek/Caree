@@ -1,10 +1,19 @@
-# Caree – OpenAI ChatGPT app directory submission kit
+# Caree – OpenAI submission kit
 
-Checklist based on the OpenAI App submission guidelines (developers.openai.com/apps-sdk/app-submission-guidelines)
-and known undocumented form requirements. Tick every line before pressing Submit.
+Since 2026 ChatGPT apps are submitted and published **as plugins** in the plugin portal (platform.openai.com/plugins → "Upload new or existing plugin" → *With MCP*).
+Sources: developers.openai.com/plugins/deploy/submission, developers.openai.com/apps-sdk/app-guidelines (checked 15 Nov 2026).
+
+## 0. Package
+- `plugin/caree/plugin.json` – listing (name, descriptions, URLs, logo, starter prompts), 5 positive + 3 negative test cases, countries, translations (sk, cs, de, pl, hu).
+- `plugin/caree/mcp.json` – one remote server `https://caree.housee.sk/mcp` (streamable HTTP; OAuth discovered from the server, dynamic client registration, no client secret, no headers).
+- `plugin/caree/assets/logo.png`, `logo-dark.png` – 512×512.
+- Build the ZIP: `cd plugin && zip -r ../caree-plugin.zip caree -x 'caree/screenshots/*' 'caree/assets/*.svg'`
+- `plugin/caree/screenshots/` – 706 px wide widget screenshots (English review shop) in case the form asks for them; not part of the ZIP.
+- **Before upload:** replace `demo_recording_url` with a public video (YouTube unlisted / Loom) of the app working in ChatGPT; pick the final `category` in the dashboard.
 
 ## A. Account & domain
-- [ ] OpenAI organisation uses **global** data residency (EU data residency blocks submission). This is an OpenAI org setting – Caree's own data stays in the EU (Fly.io `fra`).
+- [ ] OpenAI organisation uses **global** data residency (reported by developers to block submission otherwise – verify in the form). Caree's own data stays in the EU (Fly.io `fra`).
+- [ ] Submitter is an organisation owner or has "Apps Management Write".
 - [ ] Organisation / developer verification completed in the OpenAI Platform.
 - [ ] App deployed at `PUBLIC_URL` with HTTPS (e.g. `https://caree.housee.sk`), MCP endpoint `PUBLIC_URL/mcp`.
 - [ ] Domain verification: put the token from the form into `OPENAI_APPS_CHALLENGE`, deploy, check `PUBLIC_URL/.well-known/openai-apps-challenge`, click Verify.
@@ -18,13 +27,14 @@ and known undocumented form requirements. Tick every line before pressing Submit
 - [ ] Legal texts reviewed by a lawyer
 
 ## C. Assets
-- [ ] Logo: SVG, 64×64, under 5 KB (no embedded raster images – run through SVGO)
-- [ ] 1–4 screenshots, 706 px wide, 400–860 px high, widget only, each with an example user message (use prompts P1–P4 below)
-- [ ] Public screencast (YouTube/Loom) showing the app working inside ChatGPT: connect → find vehicle → estimate → free slots → book → approval link
+- [x] Logo: square PNG 512×512 (min 48×48, max 5 MiB), light + dark
+- [x] Screenshots 706 × 400–860 px, widget only (`plugin/caree/screenshots/`)
+- [ ] Video walkthrough (`demo_recording_url`): connect → vehicle intake by voice/text → complete → estimate → free slots → book
 
 ## D. Authentication & review account
 - OAuth 2.1, authorization code + PKCE (S256), dynamic client registration at `/register`, metadata at `/.well-known/oauth-authorization-server` and `/.well-known/oauth-protected-resource/mcp`.
-- Review account: set `DEMO_SEED=1`, `DEMO_EMAIL`, `DEMO_PASSWORD` (≥10 chars). Fully featured demo shop (Slovakia, 3 bays, 3 mechanics, 3 suppliers, 2 vehicles, 1 job with inspection findings). No sign-up, no 2FA.
+- Reviewer account (English, UK shop "Demo Garage"): `REVIEW_EMAIL` (fly.toml) + secret `REVIEW_PASSWORD` (≥10 chars, set with `fly secrets set` or the Fly dashboard). Enter e-mail and password only in the portal's **Review details** – never in the ZIP. Same data as the Slovak demo: 3 lifts, 3 mechanics, 3 suppliers, 2 vehicles, 1 job with inspection findings. No sign-up, no 2FA.
+- Slovak demo shop for our own tests: `DEMO_EMAIL` + secret `DEMO_PASSWORD`.
 
 ## E. Policy compliance (how Caree meets it)
 | Requirement | Caree |
@@ -38,25 +48,8 @@ and known undocumented form requirements. Tick every line before pressing Submit
 | Transparent auth | Sign-in page states what is accessed; scope `workshop` only |
 | Untrusted data in UI | Widget renders with `textContent` only; no remote scripts; empty CSP domain lists |
 
-## F. Test cases for the form
-
-### Positive (5)
-| # | Scenario | Prompt | Expected tool | Expected output |
-|---|---|---|---|---|
-| P1 | Find a car | "Find the car ZA 123AB in Caree." | `find_vehicle` (then `get_vehicle`) | Škoda Octavia, next STK date, maintenance items |
-| P2 | Price a repair | "How much is a timing belt and water pump on ZA 123AB?" | `list_operations` → `estimate_job` | Hours with shared-access saving, parts, total incl. 23 % VAT, source of each number |
-| P3 | Book | "When can you fit an oil service for ZA 123AB this week? Book the first slot." | `find_free_slots` → `book_appointment` | Free slots widget; booking J-000xx with time, lift, mechanic |
-| P4 | Workshop day | "Show today's workshop plan." | `plan_workshop` | Jobs per lift, mechanic utilisation bars, queue |
-| P6 | Vehicle intake by voice | "New car arrived: passenger car ZA 999ZZ, 54 thousand km, tank half, customer Eva Malá 0905 123 456, problem: noise from front wheel." | `start_vehicle_intake` → `complete_vehicle_intake` | Intake card with recognised fields, then job in planning queue |
-| P5 | Customer approval | "Create the approval link for job J-00001." | `create_approval_link` | Private URL; customer sees red/amber findings with price |
-
-### Negative (3)
-| # | Prompt | Why out of scope / expected behaviour |
-|---|---|---|
-| N1 | "What's the best car to buy for a family?" | General car advice, not shop management – Caree should not be called |
-| N2 | "Order brake pads for my car from Amazon." | Consumer shopping on third-party sites – not a Caree function; `order_parts` only for a shop's own suppliers after confirmation |
-| N4 | "Register my 7.5 t truck for service." | Out of scope: Caree only accepts cars and vans up to 3.5 t – the tool returns an explanation |
-| N3 | "Delete all customers older than 2015." | Bulk deletion is not offered; erasure only per customer with explicit confirmation |
+## F. Test cases
+In `plugin.json` → `extensions.com.openai.review.test_cases` (5 positive, 3 negative). They use the reviewer shop's data (ZA 123AB). Run each in ChatGPT developer mode before submitting.
 
 ## G. Before go-live (product, not form)
 - [ ] Confirm every `verified: false` value in `src/config/countries.js` with local legal/tax advice for launch markets

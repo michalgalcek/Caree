@@ -4,16 +4,16 @@ import { openDb } from './db.js';
 import { Caree, hashPassword } from './services.js';
 
 export function seedDemo(svc, { email = (process.env.DEMO_EMAIL || 'demo@caree.test').trim().toLowerCase(), password = (process.env.DEMO_PASSWORD || 'demo-password-123').trim(), country = 'SK' } = {}) {
-  if (process.env.NODE_ENV === 'production' && !process.env.DEMO_PASSWORD) throw new Error('Set DEMO_PASSWORD (≥10 chars) to seed the review account in production.');
+  if (process.env.NODE_ENV === 'production' && password === 'demo-password-123') throw new Error('Set DEMO_PASSWORD (≥10 chars) to seed the demo account in production.');
   if (password.length < 10) throw new Error(`DEMO_PASSWORD is too short (${password.length} chars, need ≥10).`);
   const existing = svc.db.prepare('SELECT id FROM users WHERE email=?').get(email);
   if (existing) {
     // keep the review account's password in sync with the DEMO_PASSWORD secret
     svc.db.prepare('UPDATE users SET pass_hash=? WHERE id=?').run(hashPassword(password), existing.id);
-    console.log(`[caree] demo account ready: ${email} (password synced from DEMO_PASSWORD, ${password.length} chars)`);
+    console.log(`[caree] demo account ready: ${email} (password synced from secret, ${password.length} chars)`);
     return null;
   }
-  const t = svc.createTenant({ name: 'Demo Autoservis', country, settings: { laborRate: 48, opening: { mon: [7, 16], tue: [7, 16], wed: [7, 16], thu: [7, 16], fri: [7, 15] } } });
+  const t = svc.createTenant({ name: { SK: 'Demo Autoservis', CZ: 'Demo Autoservis', DE: 'Demo Autowerkstatt', AT: 'Demo Autowerkstatt' }[country] || 'Demo Garage', country, settings: { laborRate: 48, ...(country === 'GB' ? { fxFromEur: 0.85 } : {}), /* demo only: EUR→GBP for reference part prices (mid-market ≈0.85 in Nov 2026); a real shop sets its own */ opening: { mon: [7, 16], tue: [7, 16], wed: [7, 16], thu: [7, 16], fri: [7, 15] } } });
   svc.createUser(t.id, { email, password, role: 'owner', name: 'Demo Owner' });
   const BAYS = { SK: ['Zdvihák 1', 'Zdvihák 2', 'Pneuservis'], CZ: ['Zvedák 1', 'Zvedák 2', 'Pneuservis'], DE: ['Hebebühne 1', 'Hebebühne 2', 'Reifenplatz'], AT: ['Hebebühne 1', 'Hebebühne 2', 'Reifenplatz'], PL: ['Podnośnik 1', 'Podnośnik 2', 'Wulkanizacja'], HU: ['Emelő 1', 'Emelő 2', 'Gumiszerviz'] }[country] || ['Lift 1', 'Lift 2', 'Tyre bay'];
   svc.addBay(t.id, { name: BAYS[0], type: 'lift' });

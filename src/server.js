@@ -17,6 +17,11 @@ export function createApp({ db = openDb(), baseUrl = process.env.PUBLIC_URL || '
   const svc = new Caree(db, { fetchImpl });
   if (seed) {
     try { seedDemo(svc); } catch (e) { console.warn(`[caree] demo account not created: ${e.message}`); }
+    // Separate English-language account for the OpenAI reviewers (own shop, own data, UK settings).
+    if (process.env.REVIEW_EMAIL && process.env.REVIEW_PASSWORD) {
+      try { seedDemo(svc, { email: process.env.REVIEW_EMAIL.trim().toLowerCase(), password: process.env.REVIEW_PASSWORD.trim(), country: (process.env.REVIEW_COUNTRY || 'GB').toUpperCase() }); }
+      catch (e) { console.warn(`[caree] review account not created: ${e.message}`); }
+    }
   }
   const provider = new CareeOAuthProvider(db, svc);
   const app = express();

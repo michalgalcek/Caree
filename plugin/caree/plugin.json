@@ -1,0 +1,142 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "caree",
+  "version": "1.0.0",
+  "description": "Workshop assistant for repair shops servicing cars and vans up to 3.5 t: vehicle intake by voice, estimates, bookings, workshop planning and parts orders.",
+  "author": {
+    "name": "housee s.r.o.",
+    "email": "housee@housee.sk",
+    "url": "https://caree.housee.sk"
+  },
+  "homepage": "https://caree.housee.sk",
+  "mcpServers": "./mcp.json",
+  "extensions": {
+    "com.openai": {
+      "interface": {
+        "displayName": "Caree",
+        "shortDescription": "Car repair shop assistant",
+        "longDescription": "Caree is a workshop assistant for independent repair shops that service passenger cars and vans up to 3.5 t. Technicians and service advisers use it right inside ChatGPT:\n\n• Vehicle intake (check-in): type or dictate what you see – plate, VIN, mileage, fuel level, warning lights, damage, keys, customer and complaint – and Caree fills the intake form and asks only for what is missing.\n• Vehicle and customer records with VIN decoding, mileage history, next periodic inspection by country rules and maintenance due dates.\n• Repair estimates in the shop's currency with VAT, using the shop's labour rate, its own measured repair times and overlap savings between operations.\n• Free slots and bookings that respect lifts (including lift capacity), mechanics' skills and parts delivery times; daily workshop plan with utilisation.\n• Digital inspection findings and a customer approval link.\n• Parts price comparison and orders from the suppliers the shop chooses – always confirmed by the user first.\n• GDPR tools: data export and erasure per customer. The shop is the data controller; Caree (housee s.r.o.) is its processor.\n\nEstimates are guidance – the shop decides the final price. Caree requires a Caree workshop account.",
+        "developerName": "housee s.r.o.",
+        "category": "Productivity",
+        "capabilities": [
+          "Vehicle intake by typing or voice",
+          "Vehicle and customer records",
+          "Repair estimates with VAT",
+          "Free slots and bookings",
+          "Workshop planning",
+          "Inspection findings and approval links",
+          "Parts comparison and orders",
+          "Customer data export and erasure"
+        ],
+        "websiteURL": "https://caree.housee.sk/",
+        "supportURL": "https://caree.housee.sk/support",
+        "privacyPolicyURL": "https://caree.housee.sk/privacy",
+        "termsOfServiceURL": "https://caree.housee.sk/terms",
+        "defaultPrompt": [
+          "Start a vehicle intake: car ZA 999ZZ, 54,000 km, customer Eva Mala, front wheel humming.",
+          "How much is a timing belt and water pump on ZA 123AB?",
+          "Show today's workshop plan."
+        ],
+        "brandColor": "#0B6BCB",
+        "brandColorDark": "#3B9BFF",
+        "logo": "./assets/logo.png",
+        "logoDark": "./assets/logo-dark.png"
+      },
+      "review": {
+        "test_cases": {
+          "positive": [
+            {
+              "description": "Vehicle intake from one dictated sentence",
+              "prompt": "New car just arrived: passenger car ZA 999ZZ, Skoda Octavia 2019 diesel, 54,000 km, fuel half, no warning lights, customer Eva Mala +421 905 123 456, complaint: front wheel humming, damage: scratched left mirror, two keys. Start the intake in Caree.",
+              "tools_triggered": "start_vehicle_intake",
+              "expected_behavior": "Intake card I-000xx with all recognised fields (plate, make, model, year, fuel, mileage, fuel level, warning lights, damage, keys, customer name and phone, complaint) and the note that all required data is filled. Nothing is saved as a vehicle or job yet; ChatGPT asks whether to complete the intake."
+            },
+            {
+              "description": "Complete the intake and create a job",
+              "prompt": "Yes, complete the intake.",
+              "tools_triggered": "complete_vehicle_intake",
+              "expected_behavior": "Customer and vehicle are stored, mileage recorded, a job J-000xx is created with status 'requested' and waits in the planning queue. The card shows the job number."
+            },
+            {
+              "description": "Look up a vehicle and its due services",
+              "prompt": "Show me the car ZA 123AB in Caree.",
+              "tools_triggered": "find_vehicle, get_vehicle",
+              "expected_behavior": "Vehicle card: Skoda Octavia 2020, VIN, the next periodic inspection date (overdue in the demo data) and maintenance items; items without service history are marked as estimates."
+            },
+            {
+              "description": "Price a repair",
+              "prompt": "How much would a timing belt and water pump cost on ZA 123AB?",
+              "tools_triggered": "estimate_job",
+              "expected_behavior": "Estimate card with labour hours per operation (2 h saved because both jobs share access), parts with reference prices, shop supplies, VAT and the total; note that part prices must be confirmed with the supplier."
+            },
+            {
+              "description": "Find a free slot and book it",
+              "prompt": "When can the shop do an oil service on ZA 123AB? Book the first free slot.",
+              "tools_triggered": "find_free_slots, book_appointment",
+              "expected_behavior": "Free-slot cards (lift and mechanic per slot); after the user confirms, a booking J-000xx with time, lift and mechanic is created."
+            }
+          ],
+          "negative": [
+            {
+              "description": "General car advice is not shop management",
+              "prompt": "Which family car should I buy?"
+            },
+            {
+              "description": "Vehicles over 3.5 t are out of scope",
+              "prompt": "Register my 7.5 t truck for service in Caree."
+            },
+            {
+              "description": "No bulk deletion of customer data",
+              "prompt": "Delete all customers who have not visited since 2015."
+            }
+          ]
+        },
+        "demo_recording_url": "https://REPLACE-WITH-VIDEO-URL",
+        "commerce": false,
+        "commerce_description": "No commerce in ChatGPT. Caree does not sell, show plans, prices of Caree or checkout links. Parts orders go to the shop's own suppliers under the shop's existing accounts, only after the user confirms."
+      },
+      "publication": {
+        "countries": [
+          "SK",
+          "CZ",
+          "DE",
+          "AT",
+          "PL",
+          "HU",
+          "FR",
+          "IT",
+          "ES",
+          "NL",
+          "BE",
+          "GB",
+          "US",
+          "CA",
+          "AU"
+        ],
+        "release_notes": "First release: vehicle intake by typing or voice, vehicle records, estimates, bookings, workshop planning, inspections, parts orders, GDPR tools. Scope: passenger cars and vans up to 3.5 t.",
+        "translations": {
+          "sk-SK": {
+            "subtitle": "Asistent pre autoservisy",
+            "description": "Vstupná prehliadka písaním alebo hlasom, databáza vozidiel, odhad ceny, voľné termíny, plán dielne a objednávky dielov – pre osobné a úžitkové vozidlá do 3,5 t."
+          },
+          "cs-CZ": {
+            "subtitle": "Asistent pro autoservisy",
+            "description": "Vstupní prohlídka psaním nebo hlasem, databáze vozidel, odhad ceny, volné termíny, plán dílny a objednávky dílů – pro osobní a užitková vozidla do 3,5 t."
+          },
+          "de-DE": {
+            "subtitle": "Assistent für Kfz-Werkstätten",
+            "description": "Fahrzeugannahme per Text oder Sprache, Fahrzeugakte, Kostenschätzung, freie Termine, Werkstattplanung und Teilebestellung – für Pkw und Transporter bis 3,5 t."
+          },
+          "pl-PL": {
+            "subtitle": "Asystent warsztatu",
+            "description": "Przyjęcie pojazdu tekstem lub głosem, baza pojazdów, kosztorys, wolne terminy, plan warsztatu i zamawianie części – dla aut osobowych i dostawczych do 3,5 t."
+          },
+          "hu-HU": {
+            "subtitle": "Autószerviz-asszisztens",
+            "description": "Járműátvétel szöveggel vagy hanggal, járműnyilvántartás, költségbecslés, szabad időpontok, műhelyterv és alkatrészrendelés – személyautókhoz és 3,5 t-ig kisteherautókhoz."
+          }
+        }
+      }
+    }
+  }
+}
