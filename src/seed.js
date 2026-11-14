@@ -1,11 +1,18 @@
 // Demo shop for development and for the OpenAI review account (fully featured, no sign-up, no 2FA).
 import { fileURLToPath } from 'node:url';
 import { openDb } from './db.js';
-import { Caree } from './services.js';
+import { Caree, hashPassword } from './services.js';
 
-export function seedDemo(svc, { email = process.env.DEMO_EMAIL || 'demo@caree.test', password = process.env.DEMO_PASSWORD || 'demo-password-123', country = 'SK' } = {}) {
+export function seedDemo(svc, { email = (process.env.DEMO_EMAIL || 'demo@caree.test').trim().toLowerCase(), password = (process.env.DEMO_PASSWORD || 'demo-password-123').trim(), country = 'SK' } = {}) {
   if (process.env.NODE_ENV === 'production' && !process.env.DEMO_PASSWORD) throw new Error('Set DEMO_PASSWORD (≥10 chars) to seed the review account in production.');
-  if (svc.db.prepare('SELECT 1 FROM users WHERE email=?').get(email)) return null;
+  if (password.length < 10) throw new Error(`DEMO_PASSWORD is too short (${password.length} chars, need ≥10).`);
+  const existing = svc.db.prepare('SELECT id FROM users WHERE email=?').get(email);
+  if (existing) {
+    // keep the review account's password in sync with the DEMO_PASSWORD secret
+    svc.db.prepare('UPDATE users SET pass_hash=? WHERE id=?').run(hashPassword(password), existing.id);
+    console.log(`[caree] demo account ready: ${email} (password synced from DEMO_PASSWORD, ${password.length} chars)`);
+    return null;
+  }
   const t = svc.createTenant({ name: 'Demo Autoservis', country, settings: { laborRate: 48, opening: { mon: [7, 16], tue: [7, 16], wed: [7, 16], thu: [7, 16], fri: [7, 15] } } });
   svc.createUser(t.id, { email, password, role: 'owner', name: 'Demo Owner' });
   svc.addBay(t.id, { name: 'Lift 1', type: 'lift' });
@@ -28,6 +35,7 @@ export function seedDemo(svc, { email = process.env.DEMO_EMAIL || 'demo@caree.te
     { item: 'Brake fluid', status: 'amber', measurement: 'Water content 3 %', recommendedOp: 'BRAKE_FLUID' },
     { item: 'Tyres', status: 'green', measurement: '5 mm' },
   ], { actor: 'seed' });
+  console.log(`[caree] demo account created: ${email} (${password.length} chars password)`);
   return { tenantId: t.id, email, vehicles: [v1.id, v2.id], job: j.ref };
 }
 
