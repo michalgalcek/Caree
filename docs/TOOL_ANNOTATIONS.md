@@ -26,5 +26,9 @@ Generated from the code (`npm run annotations`). Every tool sets all three hints
 | `get_shop_settings` | Shop settings | true | false | false | Reads configuration. |
 | `set_shop_settings` | Change shop settings | false | false | false | Updates configuration of the signed-in shop; old values can be set back. |
 | `setup_workshop` | Add lifts, mechanics, suppliers | false | false | false | Adds configuration records; nothing is deleted. |
+| `start_vehicle_intake` | Start vehicle intake | false | false | false | Creates a draft intake record in the shop; nothing is sent or deleted. |
+| `update_vehicle_intake` | Add to vehicle intake | false | false | false | Updates a draft intake record; reversible, nothing is sent. |
+| `complete_vehicle_intake` | Complete vehicle intake | false | false | false | Creates customer, vehicle and job records in the shop; nothing is sent or deleted. |
+| `list_open_intakes` | Open intakes | true | false | false | Reads data of the signed-in shop. |
 | `export_customer_data` | Export customer data | true | false | false | Reads data; the export is shown only to the signed-in shop user. |
 | `erase_customer_data` | Erase customer personal data | false | true | false | Irreversibly removes personal data. |

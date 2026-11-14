@@ -23,7 +23,7 @@ before(async () => {
   tenantSvc = svc;
   await new Promise((r) => { srv = app.listen(port, r); });
 });
-after(() => srv?.close());
+after(() => { srv?.closeAllConnections(); srv?.close(); });
 
 test('OAuth: metadata, dynamic registration, PKCE login, token', async () => {
   const meta = await (await fetch(base + '/.well-known/oauth-authorization-server')).json();
@@ -150,4 +150,52 @@ test('GDPR: erase keeps jobs, removes personal data', async () => {
   const row = tenantSvc.q('SELECT * FROM customers WHERE id=?').get(c.id);
   assert.equal(row.phone, null);
   assert.equal(tenantSvc.q('SELECT COUNT(*) n FROM jobs WHERE customer_id=?').get(c.id).n, before);
+});
+
+test('MCP: vehicle intake by dictation, asks only for missing, completes into queue', async () => {
+  const r1 = await call('start_vehicle_intake', { text: 'Osobné auto KE 777AA, 88 000 km, nádrž pol, kontrolky: ABS svieti' });
+  assert.ok(!r1.isError, r1.content[0].text);
+  assert.equal(r1.structuredContent.view, 'intake');
+  assert.match(r1.content[0].text, /Missing:/);
+  const ref = r1.structuredContent.ref;
+  const r2 = await call('update_vehicle_intake', { ref, fields: { customerName: 'Mária Kováčová', customerPhone: '0905 111 222', complaint: 'ABS warning light on' } });
+  assert.equal(r2.structuredContent.complete, true, r2.content[0].text);
+  const r3 = await call('complete_vehicle_intake', { ref });
+  assert.match(r3.content[0].text, /completed\. Job J-/);
+  const heavy = await call('start_vehicle_intake', { text: 'Dodávka BB 123CC, hmotnosť 4,2 t' });
+  assert.match(heavy.content[0].text, /3,500/);
+});
+
+test('Tablet: dictation parse endpoint and offline intake sync', async () => {
+  const login = await (await fetch(base + '/api/app/login', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ email: 'demo@caree.test', password: 'demo-password-123' }) })).json();
+  const auth = { authorization: 'Bearer ' + login.access_token, 'content-type': 'application/json' };
+  const p = await (await fetch(base + '/api/app/intake/parse', { method: 'POST', headers: auth, body: JSON.stringify({ text: 'NR 555BB osobné, 12 000 km' }) })).json();
+  assert.equal(p.fields.plate, 'NR 555BB'); assert.equal(p.fields.mileage, 12000);
+  const today = await (await fetch(base + '/api/app/today', { headers: auth })).json();
+  assert.ok(today.intake.fields.some((f) => f.key === 'category'));
+  const op = { clientOpId: 'intake-1', type: 'intake', complete: true, text: '', fields: { plate: 'NR 555BB', category: 'M1', mileage: 12000, customerName: 'Ivan Malý', customerPhone: '0907 000 111', complaint: 'oil change' } };
+  const s = await (await fetch(base + '/api/app/sync', { method: 'POST', headers: auth, body: JSON.stringify({ ops: [op] }) })).json();
+  assert.equal(s.results[0].status, 'applied', JSON.stringify(s));
+});
+
+test('OAuth sign-in survives a server restart between authorize and login', async () => {
+  const fs = await import('node:fs');
+  const net = await import('node:net');
+  const file = `/tmp/caree-restart-${Date.now()}.db`;
+  const port = await new Promise((res) => { const s = net.createServer().listen(0, () => { const p = s.address().port; s.close(() => res(p)); }); });
+  const b = `http://localhost:${port}`;
+  let a1 = createApp({ db: openDb(file), baseUrl: b, seed: true });
+  let srv1 = await new Promise((r) => { const s = a1.app.listen(port, () => r(s)); });
+  const reg = await (await fetch(b + '/register', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ client_name: 'x', redirect_uris: ['https://chatgpt.com/cb'], token_endpoint_auth_method: 'none' }) })).json();
+  const au = new URL(b + '/authorize');
+  Object.entries({ response_type: 'code', client_id: reg.client_id, redirect_uri: 'https://chatgpt.com/cb', code_challenge: 'x'.repeat(43), code_challenge_method: 'S256', state: 's' }).forEach(([k, v]) => au.searchParams.set(k, v));
+  const rid = (await (await fetch(au)).text()).match(/name="rid" value="([^"]+)"/)[1];
+  srv1.closeAllConnections(); await new Promise((r) => srv1.close(r));
+  const a2 = createApp({ db: openDb(file), baseUrl: b, seed: true });
+  const srv2 = await new Promise((r) => { const s = a2.app.listen(port, () => r(s)); });
+  const post = () => fetch(b + '/oauth/login', { method: 'POST', redirect: 'manual', headers: { connection: 'close' }, body: new URLSearchParams({ rid, email: 'demo@caree.test', password: 'demo-password-123' }) });
+  const login = await post().catch(post); // the client may reuse a socket of the stopped server once
+  srv2.closeAllConnections(); await new Promise((r) => srv2.close(r));
+  for (const f of [file, file + '-wal', file + '-shm']) fs.rmSync(f, { force: true });
+  assert.equal(login.status, 302);
 });

@@ -26,14 +26,31 @@ CREATE TABLE IF NOT EXISTS part_orders (id TEXT PRIMARY KEY, tenant_id TEXT NOT 
 CREATE TABLE IF NOT EXISTS bookings_requests (id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, payload TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'new', created_at TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS offline_ops (id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, client_op_id TEXT NOT NULL UNIQUE, applied_at TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS audit_log (id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, actor TEXT, action TEXT NOT NULL, entity TEXT, entity_id TEXT, at TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS intakes (id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, ref TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'draft', data TEXT NOT NULL DEFAULT '{}', transcript TEXT NOT NULL DEFAULT '', vehicle_id TEXT, customer_id TEXT, job_id TEXT, created_by TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL, completed_at TEXT);
+CREATE INDEX IF NOT EXISTS ix_intakes_t ON intakes(tenant_id, status);
+CREATE TABLE IF NOT EXISTS oauth_pending (rid TEXT PRIMARY KEY, data TEXT NOT NULL, expires_at INTEGER NOT NULL);
+CREATE TABLE IF NOT EXISTS login_failures (key TEXT PRIMARY KEY, n INTEGER NOT NULL, until INTEGER NOT NULL);
 CREATE TABLE IF NOT EXISTS oauth_clients (client_id TEXT PRIMARY KEY, data TEXT NOT NULL, created_at TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS oauth_codes (code TEXT PRIMARY KEY, client_id TEXT NOT NULL, user_id TEXT NOT NULL, challenge TEXT NOT NULL, redirect_uri TEXT NOT NULL, scopes TEXT, resource TEXT, expires_at INTEGER NOT NULL);
 CREATE TABLE IF NOT EXISTS oauth_tokens (token TEXT PRIMARY KEY, kind TEXT NOT NULL, client_id TEXT NOT NULL, user_id TEXT NOT NULL, scopes TEXT, resource TEXT, expires_at INTEGER NOT NULL);
 `;
 
+// Additive migrations for databases created by older versions (never drop or rename – data stays).
+const MIGRATIONS = [
+  ['vehicles', 'max_weight_kg', 'INTEGER'],
+  ['bays', 'max_kg', 'INTEGER NOT NULL DEFAULT 3500'],
+];
+
 export function openDb(file = process.env.CAREE_DB || ':memory:') {
   const db = new DatabaseSync(file);
   db.exec(SCHEMA);
+  for (const [table, col, type] of MIGRATIONS) {
+    const cols = db.prepare(`PRAGMA table_info(${table})`).all().map((c) => c.name);
+    if (!cols.includes(col)) db.exec(`ALTER TABLE ${table} ADD COLUMN ${col} ${type}`);
+  }
+  // job references must be unique per shop
+  const dup = db.prepare('SELECT tenant_id, ref FROM jobs GROUP BY tenant_id, ref HAVING COUNT(*) > 1').all();
+  if (!dup.length) db.exec('CREATE UNIQUE INDEX IF NOT EXISTS ux_jobs_ref ON jobs(tenant_id, ref)');
   return db;
 }
 

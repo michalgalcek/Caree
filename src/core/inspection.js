@@ -16,7 +16,9 @@ function ruleKey(vehicle, rules) {
   const cat = vehicle.category || 'M1';
   const fuel = (vehicle.fuel || '').toUpperCase();
   if (fuel && rules[`${cat}_${fuel}`]) return `${cat}_${fuel}`;
-  return rules[cat] ? cat : (rules.M1 ? 'M1' : null);
+  if (rules[cat]) return cat;
+  if (fuel && rules[`M1_${fuel}`]) return `M1_${fuel}`;
+  return rules.M1 ? 'M1' : null;
 }
 
 /** Pick the rule version valid for an inspection due on `date`. */
@@ -68,8 +70,11 @@ export function nextInspection(tenant, vehicle, now = new Date()) {
     }
   }
   const daysLeft = Math.ceil((due - now) / DAY);
+  const cat = vehicle.category || 'M1';
+  const fallback = cat !== 'M1' && !key.startsWith(cat);
   return {
-    due: iso(due), daysLeft, overdue: daysLeft < 0, name: insp.name, rule: key,
+    due: iso(due), daysLeft, overdue: daysLeft < 0, name: insp.name, rule: key, category: cat,
+    ...(fallback ? { ruleFallback: `No separate ${cat} rule configured for this country – passenger-car rule used. Verify for vans.` } : {}),
     ruleVersionFrom: v.from, assumedFromRegistration: !last,
     emissionSeparate: !!insp.emissionSeparate,
     emissionRequired: !(insp.evEmissionExempt && (vehicle.fuel || '').toUpperCase() === 'EV'),

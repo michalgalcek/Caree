@@ -16,8 +16,8 @@ const nowS = () => Math.floor(Date.now() / 1000);
 export class CareeOAuthProvider {
   constructor(db, svc) {
     this.db = db; this.svc = svc;
-    this.pending = new Map(); // authorization requests awaiting login (server-side, so the form cannot be tampered with)
-    this.failures = new Map(); // simple login rate-limit per e-mail
+    // Pending authorization requests and login failures live in the database, so a restart or deploy
+    // in the middle of a sign-in does not break it (bug found in the ChatGPT test).
     const q = (s) => db.prepare(s);
     this._clientsStore = {
       getClient: (cid) => { const r = q('SELECT data FROM oauth_clients WHERE client_id=?').get(cid); return r ? J.parse(r.data) : undefined; },
@@ -28,32 +28,43 @@ export class CareeOAuthProvider {
 
   async authorize(client, params, res) {
     const rid = tok();
-    this.pending.set(rid, { clientId: client.client_id, clientName: client.client_name, params, exp: nowS() + 900 });
+    const p = { clientId: client.client_id, clientName: client.client_name, params: { ...params, resource: params.resource?.href || null } };
+    this.db.prepare('DELETE FROM oauth_pending WHERE expires_at < ?').run(nowS());
+    this.db.prepare('INSERT INTO oauth_pending VALUES (?,?,?)').run(sha(rid), J.str(p), nowS() + 1800);
     res.status(200).type('html').send(loginPage(rid, client.client_name));
   }
 
   /** POST /oauth/login */
   handleLogin(req, res) {
     const { rid, email = '', password = '' } = req.body || {};
-    const p = this.pending.get(rid);
-    if (!p || p.exp < nowS()) return res.status(400).type('html').send(page('Caree', '<p>This sign-in link expired. Go back to ChatGPT and connect again.</p>'));
-    const key = String(email).toLowerCase();
-    const f = this.failures.get(key) || { n: 0, until: 0 };
-    if (f.until > nowS()) return res.status(429).type('html').send(loginPage(rid, p.clientName, 'Too many attempts – wait 10 minutes.'));
-    const user = this.svc.login(email, password);
-    if (!user) {
-      f.n += 1; if (f.n >= 5) { f.until = nowS() + 600; f.n = 0; }
-      this.failures.set(key, f);
-      return res.status(401).type('html').send(loginPage(rid, p.clientName, 'Wrong e-mail or password.'));
-    }
-    this.failures.delete(key);
-    this.pending.delete(rid);
+    const row = this.db.prepare('SELECT * FROM oauth_pending WHERE rid=?').get(sha(String(rid || '')));
+    const p = row && row.expires_at >= nowS() ? J.parse(row.data) : null;
+    if (!p) return res.status(400).type('html').send(page('Caree', '<p>This sign-in link expired. Go back to ChatGPT and connect again.</p>'));
+    const check = this.checkLogin(email, password);
+    if (check.error) return res.status(check.status).type('html').send(loginPage(rid, p.clientName, check.error));
+    const user = check.user;
+    this.db.prepare('DELETE FROM oauth_pending WHERE rid=?').run(sha(rid));
     const code = tok();
-    this.db.prepare('INSERT INTO oauth_codes VALUES (?,?,?,?,?,?,?,?)').run(sha(code), p.clientId, user.id, p.params.codeChallenge, p.params.redirectUri, J.str(p.params.scopes || SCOPES), p.params.resource?.href || null, nowS() + CODE_TTL);
+    this.db.prepare('INSERT INTO oauth_codes VALUES (?,?,?,?,?,?,?,?)').run(sha(code), p.clientId, user.id, p.params.codeChallenge, p.params.redirectUri, J.str(p.params.scopes || SCOPES), p.params.resource || null, nowS() + CODE_TTL);
     const to = new URL(p.params.redirectUri);
     to.searchParams.set('code', code);
     if (p.params.state) to.searchParams.set('state', p.params.state);
     res.redirect(302, to.href);
+  }
+
+  /** Shared by ChatGPT sign-in and the tablet app: 5 wrong attempts lock the e-mail for 10 minutes. */
+  checkLogin(email, password) {
+    const key = String(email || '').toLowerCase().trim();
+    const f = this.db.prepare('SELECT * FROM login_failures WHERE key=?').get(key) || { n: 0, until: 0 };
+    if (f.until > nowS()) return { status: 429, error: 'Too many attempts – wait 10 minutes.' };
+    const user = this.svc.login(key, password);
+    if (!user) {
+      const n = f.n + 1;
+      this.db.prepare('INSERT INTO login_failures VALUES (?,?,?) ON CONFLICT(key) DO UPDATE SET n=excluded.n, until=excluded.until').run(key, n >= 5 ? 0 : n, n >= 5 ? nowS() + 600 : 0);
+      return { status: 401, error: 'Wrong e-mail or password.' };
+    }
+    this.db.prepare('DELETE FROM login_failures WHERE key=?').run(key);
+    return { user };
   }
 
   async challengeForAuthorizationCode(client, code) {

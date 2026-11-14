@@ -7,6 +7,7 @@ import { nextInspection, maintenanceDue } from './core/inspection.js';
 import { estimate, lookupOperation, OPERATIONS } from './core/estimator.js';
 import { Workshop, prioritise } from './core/scheduler.js';
 import { compareParts, placeOrder } from './core/suppliers.js';
+import { parseIntakeText, mergeIntake, intakeStatus, intakeLabels, MAX_WEIGHT_KG } from './core/intake.js';
 
 export class NotFound extends Error { constructor(m) { super(m); this.code = 'not_found'; } }
 export class Invalid extends Error { constructor(m) { super(m); this.code = 'invalid'; } }
@@ -75,10 +76,10 @@ export class Caree {
     this.q('INSERT INTO mechanics (id,tenant_id,name,skills,hours) VALUES (?,?,?,?,?)').run(m.id, tid, name, J.str(skills), hours ? J.str(hours) : null);
     return { id: m.id, name, skills };
   }
-  addBay(tid, { name, type = 'lift', capabilities = [] }) {
+  addBay(tid, { name, type = 'lift', capabilities = [], maxKg = 3500 }) {
     const b = { id: id() };
-    this.q('INSERT INTO bays (id,tenant_id,name,type,capabilities) VALUES (?,?,?,?,?)').run(b.id, tid, name, type, J.str(capabilities));
-    return { id: b.id, name, type };
+    this.q('INSERT INTO bays (id,tenant_id,name,type,capabilities,max_kg) VALUES (?,?,?,?,?,?)').run(b.id, tid, name, type, J.str(capabilities), maxKg);
+    return { id: b.id, name, type, maxKg };
   }
   addSupplier(tid, { name, kind = 'email', priority = 5, ...config }) {
     const s = { id: id() };
@@ -89,7 +90,7 @@ export class Caree {
     return this.q('SELECT * FROM suppliers WHERE tenant_id=? ORDER BY priority').all(tid).map((r) => ({ id: r.id, name: r.name, kind: r.kind, priority: r.priority, active: !!r.active, health: { lastOkAt: r.last_ok_at, lastError: r.last_error, lastErrorAt: r.last_error_at }, ...J.parse(r.config, {}) }));
   }
   mechanics(tid) { return this.q('SELECT * FROM mechanics WHERE tenant_id=?').all(tid).map((m) => ({ id: m.id, name: m.name, skills: J.parse(m.skills, []), hours: J.parse(m.hours), absences: J.parse(m.absences, []), active: !!m.active })); }
-  bays(tid) { return this.q('SELECT * FROM bays WHERE tenant_id=?').all(tid).map((b) => ({ id: b.id, name: b.name, type: b.type, capabilities: J.parse(b.capabilities, []), active: !!b.active })); }
+  bays(tid) { return this.q('SELECT * FROM bays WHERE tenant_id=?').all(tid).map((b) => ({ id: b.id, name: b.name, type: b.type, capabilities: J.parse(b.capabilities, []), maxKg: b.max_kg ?? 3500, active: !!b.active })); }
 
   // ---------- customers & vehicles
   addCustomer(tid, { name, phone = null, email = null, language = null, marketingConsent = false }) {
@@ -102,7 +103,10 @@ export class Caree {
     if (!c) throw new NotFound('customer not found');
     return { id: c.id, name: c.name, phone: c.phone, email: c.email, language: c.language, marketingConsent: !!c.marketing_consent, anonymized: !!c.anonymized_at };
   }
-  addVehicle(tid, { customerId = null, vin = null, plate = null, make = null, model = null, engine = null, year = null, fuel = null, category = 'M1', firstRegistration = null, lastInspection = null, mileage = null }) {
+  addVehicle(tid, { customerId = null, vin = null, plate = null, make = null, model = null, engine = null, year = null, fuel = null, category = 'M1', maxWeightKg = null, firstRegistration = null, lastInspection = null, mileage = null }) {
+    category = String(category || 'M1').toUpperCase();
+    if (!['M1', 'N1'].includes(category)) throw new Invalid('Caree is for passenger cars (M1) and light commercial vehicles up to 3.5 t (N1) only.');
+    if (maxWeightKg != null && Number(maxWeightKg) > MAX_WEIGHT_KG) throw new Invalid(`Vehicle weight ${maxWeightKg} kg is over 3,500 kg – Caree is for vehicles up to 3.5 t only.`);
     let decoded = null;
     if (vin) {
       decoded = decodeVin(vin);
@@ -114,8 +118,8 @@ export class Caree {
     if (!vin && !plate) throw new Invalid('VIN or licence plate required');
     const v = { id: id() };
     const today = nowIso().slice(0, 10);
-    this.q(`INSERT INTO vehicles (id,tenant_id,customer_id,vin,plate,make,model,engine,year,fuel,category,first_registration,last_inspection,mileage,mileage_date,created_at)
-      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(v.id, tid, customerId, vin, normPlate(plate), make, model, engine, year, fuel ? fuel.toUpperCase() : null, category, firstRegistration, lastInspection, mileage, mileage != null ? today : null, nowIso());
+    this.q(`INSERT INTO vehicles (id,tenant_id,customer_id,vin,plate,make,model,engine,year,fuel,category,first_registration,last_inspection,mileage,mileage_date,created_at,max_weight_kg)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(v.id, tid, customerId, vin, normPlate(plate), make, model, engine, year, fuel ? fuel.toUpperCase() : null, category, firstRegistration, lastInspection, mileage, mileage != null ? today : null, nowIso(), maxWeightKg != null ? Number(maxWeightKg) : null);
     if (mileage != null) this.q('INSERT INTO mileage VALUES (?,?,?,?,?)').run(id(), tid, v.id, today, mileage);
     return { vehicle: this.vehicle(tid, v.id), vinWarnings: decoded?.warnings || [] };
   }
@@ -204,8 +208,9 @@ export class Caree {
     return this.q(`SELECT id, start, end FROM jobs WHERE tenant_id=? AND vehicle_id=? AND status IN ('booked','in_progress') AND start IS NOT NULL`).all(tid, vehicleId)
       .filter((j) => j.id !== excludeJobId).map((j) => ({ start: j.start, end: j.end }));
   }
-  jobSpec(tid, codes, make) {
+  jobSpec(tid, codes, make, vehicleKg = null) {
     return {
+      vehicleKg,
       tasks: codes.map((code) => {
         const op = lookupOperation(code);
         if (!op) throw new Invalid(`unknown operation ${code}`);
@@ -221,11 +226,11 @@ export class Caree {
     const v = vehicleId ? this.vehicle(tid, vehicleId) : null;
     const ws = this.workshop(tid);
     if (!this.bays(tid).length || !this.mechanics(tid).length) throw new Invalid('Add at least one lift/bay and one mechanic first (setup_workshop).');
-    return { timezone: s.timezone, slots: ws.findSlots(this.jobSpec(tid, codes, v?.make), { earliest: start, partsEta, count, avoid: this.vehicleBusy(tid, vehicleId) }) };
+    return { timezone: s.timezone, slots: ws.findSlots(this.jobSpec(tid, codes, v?.make, v?.maxWeightKg), { earliest: start, partsEta, count, avoid: this.vehicleBusy(tid, vehicleId) }) };
   }
   book(tid, { vehicleId, codes, start = null, complaint = null, customerWaiting = false, promisedBy = null, source = 'staff', actor }) {
     const v = this.vehicle(tid, vehicleId);
-    const spec = this.jobSpec(tid, codes, v.make);
+    const spec = this.jobSpec(tid, codes, v.make, v.maxWeightKg);
     const ws = this.workshop(tid);
     const s = this.settings(tid);
     const earliest = start || roundUp(localNow(s.timezone));
@@ -280,7 +285,7 @@ export class Caree {
     const codes = this.q('SELECT code FROM job_tasks WHERE tenant_id=? AND job_id=?').all(tid, j.id).map((r) => r.code);
     const v = this.vehicle(tid, j.vehicle_id);
     const ws = this.workshop(tid, { excludeJobId: j.id });
-    const [p] = ws.findSlots(this.jobSpec(tid, codes, v.make), { earliest, count: 1, onePerDay: false, partsEta: j.parts_eta, avoid: this.vehicleBusy(tid, v.id, j.id) });
+    const [p] = ws.findSlots(this.jobSpec(tid, codes, v.make, v.maxWeightKg), { earliest, count: 1, onePerDay: false, partsEta: j.parts_eta, avoid: this.vehicleBusy(tid, v.id, j.id) });
     if (!p) throw new Invalid('no free slot found');
     this.q('UPDATE jobs SET start=?, end=?, bay_id=?, assignments=?, updated_at=? WHERE id=?').run(p.start, p.end, p.bayId, J.str(p.assignments), nowIso(), j.id);
     this.audit(tid, actor, 'job.reschedule', 'job', j.id);
@@ -310,6 +315,10 @@ export class Caree {
         if (op.type === 'clock') this.clockTask(tid, op.taskId, op);
         else if (op.type === 'inspection') this.recordInspection(tid, op.jobRef, op.items, { actor: 'tablet' });
         else if (op.type === 'mileage') this.recordMileage(tid, op.vehicleId, op.km, op.date);
+        else if (op.type === 'intake') {
+          const r = op.ref ? this.updateIntake(tid, op.ref, { text: op.text, fields: op.fields || {}, actor: 'tablet' }) : this.startIntake(tid, { text: op.text, fields: op.fields || {}, actor: 'tablet' });
+          if (op.complete) this.completeIntake(tid, r.ref, { actor: 'tablet' });
+        }
         else throw new Invalid('unknown op');
         this.q('INSERT INTO offline_ops VALUES (?,?,?,?)').run(id(), tid, op.clientOpId, nowIso());
         results.push({ clientOpId: op.clientOpId, status: 'applied' });
@@ -417,6 +426,107 @@ export class Caree {
   }
   bookingRequests(tid) { return this.q(`SELECT * FROM bookings_requests WHERE tenant_id=? AND status='new' ORDER BY created_at`).all(tid).map((r) => ({ id: r.id, createdAt: r.created_at, ...J.parse(r.payload, {}) })); }
 
+  // ---------- vehicle intake (vstupná prehliadka) – typed or dictated, step by step
+  intakeRow(tid, ref) {
+    const r = this.q('SELECT * FROM intakes WHERE tenant_id=? AND (ref=? OR id=?)').get(tid, ref, ref);
+    if (!r) throw new NotFound(`intake ${ref} not found`);
+    return r;
+  }
+  intakeView(tid, r) {
+    const data = J.parse(r.data, {});
+    const st = intakeStatus(data);
+    const L = intakeLabels(this.settings(tid).language);
+    return {
+      ref: r.ref, status: r.status, data, ...st,
+      missingLabels: st.missing.map((k) => L[k]), recommendedLabels: st.recommended.map((k) => L[k]),
+      labels: L, vehicleId: r.vehicle_id, customerId: r.customer_id, jobRef: r.job_id ? this.q('SELECT ref FROM jobs WHERE id=?').get(r.job_id)?.ref : null,
+      createdAt: r.created_at, completedAt: r.completed_at,
+    };
+  }
+  /** Prefill from an existing vehicle/customer when the plate or VIN is already known (returning customer). */
+  intakePrefill(tid, data) {
+    const key = data.vin || data.plate;
+    if (!key) return { data, existing: null };
+    const v = this.findVehiclesSafe(tid, data.vin || data.plate).find((x) => (data.vin && x.vin === data.vin) || (data.plate && normPlate(x.plate)?.replace(/\s/g, '') === data.plate.replace(/\s/g, '')));
+    if (!v) return { data, existing: null };
+    const c = v.customerId ? this.customer(tid, v.customerId) : null;
+    const pre = { plate: v.plate, vin: v.vin, make: v.make, model: v.model, year: v.year, fuel: v.fuel, category: v.category, maxWeightKg: v.maxWeightKg, firstRegistration: v.firstRegistration, lastInspection: v.lastInspection, customerName: c && !c.anonymized ? c.name : undefined, customerPhone: c?.phone || undefined, customerEmail: c?.email || undefined };
+    const merged = { ...Object.fromEntries(Object.entries(pre).filter(([, x]) => x != null)), ...data };
+    return { data: merged, existing: v };
+  }
+  findVehiclesSafe(tid, q) { try { return this.findVehicles(tid, q); } catch { return []; } }
+
+  startIntake(tid, { text = '', fields = {}, actor = null } = {}) {
+    const s = this.settings(tid);
+    const parsed = parseIntakeText(text, { country: s.country });
+    let { data } = mergeIntake({}, { ...parsed.fields, ...fields });
+    const pre = this.intakePrefill(tid, data);
+    data = pre.data;
+    const r = { id: id(), ref: nextRef(this, tid, 'intakes', 'I-') };
+    const ts = nowIso();
+    this.q('INSERT INTO intakes (id,tenant_id,ref,status,data,transcript,vehicle_id,created_by,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?)')
+      .run(r.id, tid, r.ref, 'draft', J.str(data), text ? String(text).slice(0, 5000) : '', pre.existing?.id || null, actor, ts, ts);
+    this.audit(tid, actor, 'intake.start', 'intake', r.id);
+    return { ...this.intakeView(tid, this.intakeRow(tid, r.ref)), recognised: Object.keys(parsed.fields), knownVehicle: !!pre.existing };
+  }
+  updateIntake(tid, ref, { text = '', fields = {}, actor = null } = {}) {
+    const r = this.intakeRow(tid, ref);
+    if (r.status !== 'draft') throw new Invalid(`intake ${r.ref} is already ${r.status}`);
+    const parsed = parseIntakeText(text, { country: this.settings(tid).country });
+    const { data, changed } = mergeIntake(J.parse(r.data, {}), { ...parsed.fields, ...fields });
+    let vehicleId = r.vehicle_id;
+    let final = data;
+    if (!vehicleId && (changed.includes('plate') || changed.includes('vin'))) {
+      const pre = this.intakePrefill(tid, data);
+      final = pre.data; vehicleId = pre.existing?.id || null;
+    }
+    const transcript = [r.transcript, text].filter(Boolean).join('\n').slice(0, 20000);
+    this.q('UPDATE intakes SET data=?, transcript=?, vehicle_id=?, updated_at=? WHERE id=?').run(J.str(final), transcript, vehicleId, nowIso(), r.id);
+    this.audit(tid, actor, 'intake.update', 'intake', r.id);
+    return { ...this.intakeView(tid, this.intakeRow(tid, r.ref)), changed, recognised: Object.keys(parsed.fields) };
+  }
+  completeIntake(tid, ref, { actor = null } = {}) {
+    const r = this.intakeRow(tid, ref);
+    if (r.status !== 'draft') throw new Invalid(`intake ${r.ref} is already ${r.status}`);
+    const d = J.parse(r.data, {});
+    const st = intakeStatus(d);
+    if (!st.complete) {
+      const L = intakeLabels(this.settings(tid).language);
+      throw new Invalid(`Intake not complete. Missing: ${st.missing.map((k) => L[k]).join(', ') || '-'}${st.errors.length ? '. Errors: ' + st.errors.join('; ') : ''}`);
+    }
+    // customer: reuse the vehicle's customer if the phone matches, otherwise create
+    let customerId = null;
+    let vehicleId = r.vehicle_id;
+    if (vehicleId) {
+      const v = this.vehicle(tid, vehicleId);
+      if (v.customerId) { const c = this.customer(tid, v.customerId); if (c.phone && c.phone.replace(/\s/g, '') === String(d.customerPhone).replace(/\s/g, '')) customerId = c.id; }
+    }
+    if (!customerId) {
+      const byPhone = this.q('SELECT id FROM customers WHERE tenant_id=? AND REPLACE(phone,\' \',\'\')=? AND anonymized_at IS NULL').get(tid, String(d.customerPhone).replace(/\s/g, ''));
+      customerId = byPhone?.id || this.addCustomer(tid, { name: d.customerName, phone: d.customerPhone, email: d.customerEmail || null }).id;
+    }
+    if (vehicleId) {
+      const v = this.vehicle(tid, vehicleId);
+      if (v.customerId !== customerId) this.transferVehicle(tid, vehicleId, customerId, { actor });
+      this.q(`UPDATE vehicles SET vin=COALESCE(?,vin), plate=COALESCE(?,plate), make=COALESCE(?,make), model=COALESCE(?,model), year=COALESCE(?,year), fuel=COALESCE(?,fuel), category=COALESCE(?,category), max_weight_kg=COALESCE(?,max_weight_kg), first_registration=COALESCE(?,first_registration), last_inspection=COALESCE(?,last_inspection) WHERE tenant_id=? AND id=?`)
+        .run(d.vin || null, d.plate ? normPlate(d.plate) : null, d.make || null, d.model || null, d.year || null, d.fuel || null, d.category || null, d.maxWeightKg || null, d.firstRegistration || null, d.lastInspection || null, tid, vehicleId);
+    } else {
+      vehicleId = this.addVehicle(tid, { customerId, vin: d.vin, plate: d.plate, make: d.make, model: d.model, year: d.year, fuel: d.fuel, category: d.category, maxWeightKg: d.maxWeightKg, firstRegistration: d.firstRegistration, lastInspection: d.lastInspection }).vehicle.id;
+    }
+    this.recordMileage(tid, vehicleId, d.mileage);
+    // job waits in the planning queue; the advisor estimates and schedules it next
+    const j = { id: id(), ref: jobRef(this, tid) };
+    const ts = nowIso();
+    const condition = ['fuelLevel', 'warningLights', 'damage', 'tyres', 'itemsInCar', 'keys'].filter((k) => d[k] != null && d[k] !== '').map((k) => `${k}: ${d[k]}`).join('; ');
+    this.q(`INSERT INTO jobs (id,tenant_id,ref,vehicle_id,customer_id,status,title,complaint,customer_waiting,promised_by,source,created_at,updated_at) VALUES (?,?,?,?,?,'requested',?,?,?,?,'intake',?,?)`)
+      .run(j.id, tid, j.ref, vehicleId, customerId, String(d.complaint).slice(0, 120), [d.complaint, condition && `[intake] ${condition}`, d.notes].filter(Boolean).join('\n'), d.customerWaiting ? 1 : 0, d.promisedBy || null, ts, ts);
+    this.q(`UPDATE intakes SET status='completed', vehicle_id=?, customer_id=?, job_id=?, completed_at=?, updated_at=? WHERE id=?`).run(vehicleId, customerId, j.id, ts, ts, r.id);
+    this.q('UPDATE customers SET last_activity_at=? WHERE id=?').run(ts, customerId);
+    this.audit(tid, actor, 'intake.complete', 'intake', r.id);
+    return { ...this.intakeView(tid, this.intakeRow(tid, r.ref)), jobRef: j.ref, vehicleId, customerId, next: 'Estimate the work (estimate_job) and schedule it (find_free_slots / book_appointment).' };
+  }
+  openIntakes(tid) { return this.q(`SELECT * FROM intakes WHERE tenant_id=? AND status='draft' ORDER BY created_at DESC LIMIT 50`).all(tid).map((r) => this.intakeView(tid, r)); }
+
   // ---------- GDPR
   exportCustomer(tid, cid) {
     const c = this.customer(tid, cid);
@@ -459,11 +569,12 @@ export class Caree {
 // ---------- helpers
 function slug(s) { return String(s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 30) || 'shop'; }
 export function normPlate(p) { return p ? String(p).toUpperCase().replace(/\s+/g, ' ').trim() : null; }
-function mapVehicle(v) { return { id: v.id, customerId: v.customer_id, vin: v.vin, plate: v.plate, make: v.make, model: v.model, engine: v.engine, year: v.year, fuel: v.fuel, category: v.category, firstRegistration: v.first_registration, lastInspection: v.last_inspection, mileage: v.mileage, mileageDate: v.mileage_date, archived: !!v.archived }; }
+function mapVehicle(v) { return { id: v.id, customerId: v.customer_id, vin: v.vin, plate: v.plate, make: v.make, model: v.model, engine: v.engine, year: v.year, fuel: v.fuel, category: v.category, maxWeightKg: v.max_weight_kg ?? null, firstRegistration: v.first_registration, lastInspection: v.last_inspection, mileage: v.mileage, mileageDate: v.mileage_date, archived: !!v.archived }; }
 function mapItem(i) { return { id: i.id, item: i.item, status: i.status, note: i.note, measurement: i.measurement, photoUrls: J.parse(i.photo_urls, []), recommendedOp: i.recommended_op, decision: i.decision }; }
 function nearestKm(history, date) { const h = history.filter((x) => x.date <= date.slice(0, 10)); return h.length ? h[h.length - 1].km : 0; }
 function roundUp(local) { const [d, t] = local.split('T'); const [h, m] = t.split(':').map(Number); const mm = Math.ceil((m + 1) / 15) * 15; const H = h + Math.floor(mm / 60); return H >= 24 ? `${d}T23:45` : `${d}T${String(H).padStart(2, '0')}:${String(mm % 60).padStart(2, '0')}`; }
-function jobRef(svc, tid) { const n = svc.q('SELECT COUNT(*) n FROM jobs WHERE tenant_id=?').get(tid).n + 1; return `J-${String(n).padStart(5, '0')}`; }
+function nextRef(svc, tid, table, prefix) { const m = svc.q(`SELECT MAX(CAST(substr(ref,${prefix.length + 1}) AS INTEGER)) m FROM ${table} WHERE tenant_id=? AND ref LIKE '${prefix}%'`).get(tid).m || 0; return `${prefix}${String(m + 1).padStart(5, '0')}`; }
+function jobRef(svc, tid) { const m = svc.q("SELECT MAX(CAST(substr(ref,3) AS INTEGER)) m FROM jobs WHERE tenant_id=? AND ref LIKE 'J-%'").get(tid).m || 0; return `J-${String(m + 1).padStart(5, '0')}`; }
 function lineGross(est, code) {
   const l = est.lines.find((x) => x.code === code);
   if (!l) return null;

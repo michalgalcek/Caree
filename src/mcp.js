@@ -19,7 +19,7 @@ const localDateTime = z.string().regex(/^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2})?$/).des
 export const TOOL_ANNOTATION_NOTES = {}; // filled below – used to generate the submission justification document
 
 export function buildMcpServer(svc, { baseUrl }) {
-  const server = new McpServer({ name: 'caree', version: '0.1.0' }, { instructions: 'Caree manages a car repair shop: vehicles, bookings, estimates, digital inspections, workshop planning and parts orders. Always confirm with the user before booking, cancelling, ordering parts or erasing data. Estimates are guidance; the shop decides the final price.' });
+  const server = new McpServer({ name: 'caree', version: '0.1.0' }, { instructions: 'Caree manages a repair shop for passenger cars (M1) and light commercial vehicles up to 3.5 t (N1): vehicles, vehicle intake (check-in), bookings, estimates, digital inspections, workshop planning and parts orders. Heavier vehicles, motorcycles, buses and trucks are out of scope. When a technician receives a car, use start_vehicle_intake with everything they said (typed or dictated), then ask only for the missing fields and call update_vehicle_intake; finish with complete_vehicle_intake. Always confirm with the user before booking, cancelling, ordering parts or erasing data. Estimates are guidance; the shop decides the final price.' });
 
   server.registerResource('caree-widget', WIDGET_URI, { title: 'Caree view', mimeType: 'text/html;profile=mcp-app' }, async () => ({
     contents: [{ uri: WIDGET_URI, mimeType: 'text/html;profile=mcp-app', text: WIDGET_HTML, _meta: { ui: { prefersBorder: true, csp: { connectDomains: [], resourceDomains: [] } }, 'openai/widgetDescription': 'Shows Caree results: free slots, estimates, workshop plan, vehicle card or job status.' } }],
@@ -99,10 +99,12 @@ export function buildMcpServer(svc, { baseUrl }) {
   });
 
   tool('add_vehicle', {
-    title: 'Add vehicle and customer', description: 'Add a vehicle (and optionally a new customer) to the shop. Requires VIN or licence plate. Ask the user for the date of first registration – needed for inspection reminders.',
+    title: 'Add vehicle and customer', description: 'Add a passenger car (M1) or van up to 3.5 t (N1), and optionally a new customer. Requires VIN or licence plate. For a car that has just arrived at the workshop prefer start_vehicle_intake. Ask for the date of first registration – needed for inspection reminders.',
     input: {
       vin: z.string().max(25).optional(), plate: z.string().max(20).optional(), make: z.string().max(40).optional(), model: z.string().max(60).optional(),
       fuel: z.enum(['PETROL', 'DIESEL', 'LPG', 'CNG', 'HYBRID', 'EV']).optional(), firstRegistration: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+      category: z.enum(['M1', 'N1']).default('M1').describe('M1 = passenger car, N1 = light commercial vehicle (van) up to 3.5 t'),
+      maxWeightKg: z.number().int().min(500).max(3500).optional().describe('Max. permissible weight; Caree only accepts vehicles up to 3,500 kg'),
       lastInspection: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(), mileage: z.number().int().min(0).max(2000000).optional(),
       customerId: z.string().optional(), customerName: z.string().max(120).optional(), customerPhone: z.string().max(40).optional(), customerEmail: z.string().email().optional(),
     }, annotations: WRITE, why: 'Creates a record in the shop; nothing is deleted or sent.',
@@ -271,7 +273,7 @@ export function buildMcpServer(svc, { baseUrl }) {
   tool('setup_workshop', {
     title: 'Add lifts, mechanics, suppliers', description: 'Add lifts/bays, mechanics (with skills: general, engine, drivetrain, electrical, diagnostics, ac, tyres, alignment, hv) or parts suppliers.',
     input: {
-      bays: z.array(z.object({ name: z.string().max(40), type: z.enum(['lift', 'tyre', 'alignment', 'ev']).default('lift') })).max(30).optional(),
+      bays: z.array(z.object({ name: z.string().max(40), type: z.enum(['lift', 'tyre', 'alignment', 'ev']).default('lift'), maxKg: z.number().int().min(1000).max(3500).default(3500).describe('Lift capacity in kg (vans up to 3.5 t need a 3.5 t lift)') })).max(30).optional(),
       mechanics: z.array(z.object({ name: z.string().max(60), skills: z.array(z.enum(['general', 'engine', 'drivetrain', 'electrical', 'diagnostics', 'ac', 'tyres', 'alignment', 'hv'])).default(['general']) })).max(50).optional(),
       suppliers: z.array(z.object({ name: z.string().max(60), email: z.string().email().optional(), priority: z.number().int().min(1).max(9).default(5) })).max(20).optional(),
     }, annotations: WRITE, why: 'Adds configuration records; nothing is deleted.',
@@ -279,6 +281,57 @@ export function buildMcpServer(svc, { baseUrl }) {
     const a = ctx(extra); need(a, 'manager');
     const out = { bays: bays.map((b) => svc.addBay(a.tenantId, b)), mechanics: mechanics.map((m) => svc.addMechanic(a.tenantId, m)), suppliers: suppliers.map((s) => svc.addSupplier(a.tenantId, { ...s, kind: 'email' })) };
     return { text: `Added ${out.bays.length} bay(s), ${out.mechanics.length} mechanic(s), ${out.suppliers.length} supplier(s).`, data: out };
+  });
+
+  // ---------------- vehicle intake (vstupná prehliadka) – typed or dictated
+  const intakeInput = {
+    text: z.string().max(5000).optional().describe('Everything the technician typed or dictated, verbatim (any language). Caree extracts what it can.'),
+    fields: z.object({
+      plate: z.string().max(20).optional(), vin: z.string().max(25).optional(), make: z.string().max(40).optional(), model: z.string().max(60).optional(),
+      year: z.number().int().min(1950).max(2100).optional(), category: z.enum(['M1', 'N1']).optional().describe('M1 passenger car, N1 van ≤ 3.5 t'),
+      maxWeightKg: z.number().int().min(500).max(60000).optional(), fuel: z.enum(['PETROL', 'DIESEL', 'LPG', 'CNG', 'HYBRID', 'EV']).optional(),
+      firstRegistration: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(), lastInspection: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+      mileage: z.number().int().min(0).max(3000000).optional(), fuelLevel: z.string().max(30).optional(), warningLights: z.string().max(200).optional(),
+      damage: z.string().max(500).optional(), tyres: z.string().max(200).optional(), itemsInCar: z.string().max(200).optional(), keys: z.number().int().min(0).max(10).optional(),
+      customerName: z.string().max(120).optional(), customerPhone: z.string().max(40).optional(), customerEmail: z.string().email().optional(),
+      complaint: z.string().max(1000).optional(), customerWaiting: z.boolean().optional(), promisedBy: z.string().max(20).optional(), notes: z.string().max(1000).optional(),
+    }).optional().describe('Structured values you already understood from the conversation'),
+  };
+  const intakeText = (r) => `Intake ${r.ref} (${r.status}). ${r.complete ? 'All required data is filled.' : `Missing: ${r.missingLabels.join(', ')}.`}${r.recommendedLabels?.length ? ` Recommended: ${r.recommendedLabels.join(', ')}.` : ''}${r.errors?.length ? ` Problems: ${r.errors.join('; ')}.` : ''}`;
+
+  tool('start_vehicle_intake', {
+    title: 'Start vehicle intake', description: 'Start the check-in (vstupná prehliadka) of a car or van ≤ 3.5 t that has just arrived: pass everything the technician said or typed. Returns what was recognised and which required fields are still missing – then ask the technician only for those. A known plate/VIN is prefilled from the database.',
+    input: intakeInput, annotations: WRITE, ui: true, why: 'Creates a draft intake record in the shop; nothing is sent or deleted.',
+  }, async ({ text, fields }, extra) => {
+    const a = ctx(extra); need(a, 'mechanic');
+    const r = svc.startIntake(a.tenantId, { text, fields: fields || {}, actor: a.email });
+    return { text: intakeText(r) + (r.knownVehicle ? ' Vehicle is already in the database – data prefilled.' : ''), data: view(a.tenantId, 'intake', { title: `Intake ${r.ref}`, ...r }) };
+  });
+
+  tool('update_vehicle_intake', {
+    title: 'Add to vehicle intake', description: 'Add more information to a draft intake (what the technician said or typed next). Values are merged; existing values are only replaced by new non-empty ones.',
+    input: { ref: z.string().describe('Intake reference, e.g. I-00001'), ...intakeInput }, annotations: WRITE, ui: true, why: 'Updates a draft intake record; reversible, nothing is sent.',
+  }, async ({ ref, text, fields }, extra) => {
+    const a = ctx(extra); need(a, 'mechanic');
+    const r = svc.updateIntake(a.tenantId, ref, { text, fields: fields || {}, actor: a.email });
+    return { text: intakeText(r), data: view(a.tenantId, 'intake', { title: `Intake ${r.ref}`, ...r }) };
+  });
+
+  tool('complete_vehicle_intake', {
+    title: 'Complete vehicle intake', description: 'Finish the intake: saves the customer and vehicle in the database, records the mileage and creates a job in the planning queue. Read the summary back to the technician and get confirmation first.',
+    input: { ref: z.string() }, annotations: WRITE, ui: true, why: 'Creates customer, vehicle and job records in the shop; nothing is sent or deleted.',
+  }, async ({ ref }, extra) => {
+    const a = ctx(extra); need(a, 'mechanic');
+    const r = svc.completeIntake(a.tenantId, ref, { actor: a.email });
+    return { text: `Intake ${r.ref} completed. Job ${r.jobRef} is waiting in the planning queue. Next: estimate the work and book a slot.`, data: view(a.tenantId, 'intake', { title: `Intake ${r.ref}`, ...r }) };
+  });
+
+  tool('list_open_intakes', {
+    title: 'Open intakes', description: 'Intakes started but not yet completed.', input: {}, annotations: RO, why: 'Reads data of the signed-in shop.',
+  }, async (_p, extra) => {
+    const a = ctx(extra);
+    const list = svc.openIntakes(a.tenantId);
+    return { text: list.length ? list.map((r) => `${r.ref}: ${r.data.plate || r.data.vin || '?'} – missing ${r.missingLabels.join(', ') || 'nothing'}`).join('\n') : 'No open intakes.', data: { intakes: list } };
   });
 
   // ---------------- GDPR

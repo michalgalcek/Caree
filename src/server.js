@@ -11,6 +11,7 @@ import { buildMcpServer } from './mcp.js';
 import { publicRouter } from './web/pages.js';
 import { seedDemo } from './seed.js';
 import { localNow } from './services.js';
+import { parseIntakeText, intakeLabels, intakeStatus, INTAKE_FIELDS } from './core/intake.js';
 
 export function createApp({ db = openDb(), baseUrl = process.env.PUBLIC_URL || 'http://localhost:3000', fetchImpl, seed = process.env.DEMO_SEED === '1' } = {}) {
   const svc = new Caree(db, { fetchImpl });
@@ -47,9 +48,9 @@ export function createApp({ db = openDb(), baseUrl = process.env.PUBLIC_URL || '
 
   // Tablet API (first-party client)
   app.post('/api/app/login', express.json({ limit: '10kb' }), (req, res) => {
-    const u = svc.login(req.body?.email, req.body?.password);
-    if (!u) return res.status(401).json({ error: 'invalid_credentials' });
-    res.json(provider.issue('caree-web', u.id, SCOPES, null));
+    const c = provider.checkLogin(req.body?.email, req.body?.password);
+    if (c.error) return res.status(c.status).json({ error: c.status === 429 ? 'too_many_attempts' : 'invalid_credentials' });
+    res.json(provider.issue('caree-web', c.user.id, SCOPES, null));
   });
   app.get('/api/app/today', bearer, (req, res) => {
     const tid = req.auth.extra.tenantId;
@@ -58,7 +59,16 @@ export function createApp({ db = openDb(), baseUrl = process.env.PUBLIC_URL || '
       const full = svc.job(tid, j.ref);
       return { ref: j.ref, start: j.start, vehicle: [full.vehicle?.plate, full.vehicle?.make, full.vehicle?.model].filter(Boolean).join(' '), tasks: full.tasks.map((t) => ({ id: t.id, name: t.name, hours: t.hours, done: t.done })) };
     });
-    res.json({ date: day, jobs });
+    const st = svc.settings(tid);
+    res.json({ date: day, jobs, language: st.language, locale: st.locale, country: st.country,
+      intake: { labels: intakeLabels(st.language), fields: INTAKE_FIELDS.map((f) => ({ key: f.key, required: f.required || false, recommended: !!f.recommended, enum: f.enum || null })) },
+      openIntakes: svc.openIntakes(tid).map((r) => ({ ref: r.ref, data: r.data, missing: r.missing })) });
+  });
+  // Parse a dictation into intake fields (no database write) – the tablet fills its form with the result.
+  app.post('/api/app/intake/parse', bearer, express.json({ limit: '32kb' }), (req, res) => {
+    const st = svc.settings(req.auth.extra.tenantId);
+    const r = parseIntakeText(String(req.body?.text || '').slice(0, 5000), { country: st.country });
+    res.json({ fields: r.fields, status: intakeStatus({ ...(req.body?.current || {}), ...r.fields }) });
   });
   app.post('/api/app/sync', bearer, express.json({ limit: '256kb' }), (req, res) => {
     const ops = Array.isArray(req.body?.ops) ? req.body.ops.slice(0, 500) : [];

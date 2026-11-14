@@ -47,6 +47,7 @@ and known undocumented form requirements. Tick every line before pressing Submit
 | P2 | Price a repair | "How much is a timing belt and water pump on ZA 123AB?" | `list_operations` → `estimate_job` | Hours with shared-access saving, parts, total incl. 23 % VAT, source of each number |
 | P3 | Book | "When can you fit an oil service for ZA 123AB this week? Book the first slot." | `find_free_slots` → `book_appointment` | Free slots widget; booking J-000xx with time, lift, mechanic |
 | P4 | Workshop day | "Show today's workshop plan." | `plan_workshop` | Jobs per lift, mechanic utilisation bars, queue |
+| P6 | Vehicle intake by voice | "New car arrived: passenger car ZA 999ZZ, 54 thousand km, tank half, customer Eva Malá 0905 123 456, problem: noise from front wheel." | `start_vehicle_intake` → `complete_vehicle_intake` | Intake card with recognised fields, then job in planning queue |
 | P5 | Customer approval | "Create the approval link for job J-00001." | `create_approval_link` | Private URL; customer sees red/amber findings with price |
 
 ### Negative (3)
@@ -54,6 +55,7 @@ and known undocumented form requirements. Tick every line before pressing Submit
 |---|---|---|
 | N1 | "What's the best car to buy for a family?" | General car advice, not shop management – Caree should not be called |
 | N2 | "Order brake pads for my car from Amazon." | Consumer shopping on third-party sites – not a Caree function; `order_parts` only for a shop's own suppliers after confirmation |
+| N4 | "Register my 7.5 t truck for service." | Out of scope: Caree only accepts cars and vans up to 3.5 t – the tool returns an explanation |
 | N3 | "Delete all customers older than 2015." | Bulk deletion is not offered; erasure only per customer with explicit confirmation |
 
 ## G. Before go-live (product, not form)

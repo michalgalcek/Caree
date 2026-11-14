@@ -16,6 +16,11 @@ export const MARKET_TIERS = {
   3: 'Supported with regional rules set by the shop',
 };
 
+// Caree scope: passenger cars (M1) and light commercial vehicles up to 3.5 t (N1). Where a country has no
+// separate N1 rule configured, the M1 rule is used and the result is flagged so the shop verifies it.
+export const SUPPORTED_CATEGORIES = ['M1', 'N1'];
+export const MAX_WEIGHT_KG = 3500;
+
 const EU_ROADWORTHINESS_NOTE = 'EU Directive 2014/45/EU sets minimums; national law decides details.';
 
 export const COUNTRIES = {
@@ -65,6 +70,8 @@ export const COUNTRIES = {
           // 42nd KFG amendment: from 19 May 2027 new 4-2-2-2-1 interval
           { from: '2027-05-19', first: 4, steps: [2, 2, 2], then: 1 },
         ],
+        // ÖAMTC: class N (incl. vans ≤ 3.5 t) is NOT part of the 2027 change – stays 3-2-1
+        N1: [{ from: '2000-01-01', first: 3, steps: [2], then: 1 }],
       },
       verified: { on: '2026-11-14', source: 'https://www.oeamtc.at/thema/pickerl/laengere-pickerl-intervalle-57a-87229599' },
       note: 'Transition rules for vehicles already registered apply – confirm with ÖAMTC Pickerlrechner.',

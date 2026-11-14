@@ -1,0 +1,196 @@
+// Vehicle intake ("vstupná prehliadka"): the technician registers a newly received car while walking around it –
+// by typing or by voice. Works incrementally: every call adds what was said, Caree answers what is still missing.
+import { decodeVin, normalizeVin } from './vin.js';
+
+/** Field schema. required = must be filled before the intake can be completed. */
+export const INTAKE_FIELDS = [
+  { key: 'plate', group: 'vehicle', required: 'plateOrVin' },
+  { key: 'vin', group: 'vehicle', required: 'plateOrVin' },
+  { key: 'make', group: 'vehicle' },
+  { key: 'model', group: 'vehicle' },
+  { key: 'year', group: 'vehicle' },
+  { key: 'category', group: 'vehicle', required: true, enum: ['M1', 'N1'] }, // passenger car / light commercial vehicle
+  { key: 'maxWeightKg', group: 'vehicle' }, // permissible total weight, must be ≤ 3500 kg
+  { key: 'fuel', group: 'vehicle', enum: ['PETROL', 'DIESEL', 'LPG', 'CNG', 'HYBRID', 'EV'] },
+  { key: 'firstRegistration', group: 'vehicle' },
+  { key: 'lastInspection', group: 'vehicle' },
+  { key: 'mileage', group: 'condition', required: true },
+  { key: 'fuelLevel', group: 'condition', recommended: true },
+  { key: 'warningLights', group: 'condition' },
+  { key: 'damage', group: 'condition', recommended: true },
+  { key: 'tyres', group: 'condition' },
+  { key: 'itemsInCar', group: 'condition' },
+  { key: 'keys', group: 'condition' },
+  { key: 'customerName', group: 'customer', required: true },
+  { key: 'customerPhone', group: 'customer', required: true },
+  { key: 'customerEmail', group: 'customer' },
+  { key: 'complaint', group: 'job', required: true },
+  { key: 'customerWaiting', group: 'job' },
+  { key: 'promisedBy', group: 'job' },
+  { key: 'notes', group: 'job' },
+];
+
+export const MAX_WEIGHT_KG = 3500;
+
+export const INTAKE_LABELS = {
+  en: { category: 'Vehicle type (car / van ≤ 3.5 t)', maxWeightKg: 'Max. permissible weight (kg)', plate: 'Licence plate', vin: 'VIN', make: 'Make', model: 'Model', year: 'Year', fuel: 'Fuel', firstRegistration: 'First registration', lastInspection: 'Last inspection', mileage: 'Mileage', fuelLevel: 'Fuel / charge level', warningLights: 'Warning lights', damage: 'Visible damage', tyres: 'Tyres', itemsInCar: 'Items left in car', keys: 'Keys', customerName: 'Customer name', customerPhone: 'Customer phone', customerEmail: 'Customer e-mail', complaint: 'What is the problem / what to do', customerWaiting: 'Customer waits', promisedBy: 'Promised by', notes: 'Notes' },
+  sk: { category: 'Druh vozidla (osobné / úžitkové do 3,5 t)', maxWeightKg: 'Najväčšia prípustná hmotnosť (kg)', plate: 'EČV', vin: 'VIN', make: 'Značka', model: 'Model', year: 'Rok výroby', fuel: 'Palivo', firstRegistration: 'Prvá evidencia', lastInspection: 'Posledná STK', mileage: 'Stav km', fuelLevel: 'Palivo / nabitie', warningLights: 'Kontrolky', damage: 'Viditeľné poškodenie', tyres: 'Pneumatiky', itemsInCar: 'Veci vo vozidle', keys: 'Kľúče', customerName: 'Meno zákazníka', customerPhone: 'Telefón zákazníka', customerEmail: 'E-mail zákazníka', complaint: 'Problém / požiadavka zákazníka', customerWaiting: 'Zákazník čaká', promisedBy: 'Sľúbené do', notes: 'Poznámky' },
+  cs: { category: 'Druh vozidla (osobní / užitkové do 3,5 t)', maxWeightKg: 'Největší povolená hmotnost (kg)', plate: 'SPZ', vin: 'VIN', make: 'Značka', model: 'Model', year: 'Rok výroby', fuel: 'Palivo', firstRegistration: 'První registrace', lastInspection: 'Poslední STK', mileage: 'Stav km', fuelLevel: 'Palivo / nabití', warningLights: 'Kontrolky', damage: 'Viditelné poškození', tyres: 'Pneumatiky', itemsInCar: 'Věci ve vozidle', keys: 'Klíče', customerName: 'Jméno zákazníka', customerPhone: 'Telefon zákazníka', customerEmail: 'E-mail zákazníka', complaint: 'Problém / požadavek zákazníka', customerWaiting: 'Zákazník čeká', promisedBy: 'Slíbeno do', notes: 'Poznámky' },
+  de: { category: 'Fahrzeugart (Pkw / Transporter bis 3,5 t)', maxWeightKg: 'Zulässige Gesamtmasse (kg)', plate: 'Kennzeichen', vin: 'FIN', make: 'Marke', model: 'Modell', year: 'Baujahr', fuel: 'Kraftstoff', firstRegistration: 'Erstzulassung', lastInspection: 'Letzte HU', mileage: 'Kilometerstand', fuelLevel: 'Tank / Ladung', warningLights: 'Warnleuchten', damage: 'Sichtbare Schäden', tyres: 'Reifen', itemsInCar: 'Gegenstände im Auto', keys: 'Schlüssel', customerName: 'Kundenname', customerPhone: 'Telefon', customerEmail: 'E-Mail', complaint: 'Problem / Auftrag', customerWaiting: 'Kunde wartet', promisedBy: 'Zugesagt bis', notes: 'Notizen' },
+  pl: { category: 'Rodzaj pojazdu (osobowy / dostawczy do 3,5 t)', maxWeightKg: 'DMC (kg)', plate: 'Nr rejestracyjny', vin: 'VIN', make: 'Marka', model: 'Model', year: 'Rok', fuel: 'Paliwo', firstRegistration: 'Pierwsza rejestracja', lastInspection: 'Ostatni przegląd', mileage: 'Przebieg', fuelLevel: 'Paliwo / naładowanie', warningLights: 'Kontrolki', damage: 'Widoczne uszkodzenia', tyres: 'Opony', itemsInCar: 'Rzeczy w aucie', keys: 'Klucze', customerName: 'Klient', customerPhone: 'Telefon', customerEmail: 'E-mail', complaint: 'Problem / zlecenie', customerWaiting: 'Klient czeka', promisedBy: 'Obiecane do', notes: 'Uwagi' },
+  hu: { category: 'Járműtípus (személy / kishaszon 3,5 t-ig)', maxWeightKg: 'Megengedett össztömeg (kg)', plate: 'Rendszám', vin: 'Alvázszám', make: 'Márka', model: 'Modell', year: 'Évjárat', fuel: 'Üzemanyag', firstRegistration: 'Első forgalomba helyezés', lastInspection: 'Utolsó műszaki', mileage: 'Km-óra állás', fuelLevel: 'Üzemanyag / töltöttség', warningLights: 'Figyelmeztető lámpák', damage: 'Látható sérülés', tyres: 'Gumik', itemsInCar: 'Tárgyak az autóban', keys: 'Kulcsok', customerName: 'Ügyfél neve', customerPhone: 'Telefon', customerEmail: 'E-mail', complaint: 'Probléma / megrendelés', customerWaiting: 'Ügyfél vár', promisedBy: 'Ígért határidő', notes: 'Megjegyzés' },
+};
+export const intakeLabels = (lang) => ({ ...INTAKE_LABELS.en, ...(INTAKE_LABELS[(lang || 'en').slice(0, 2)] || {}) });
+
+// ---------------------------------------------------------------- parsing free text / dictation
+// Deterministic extraction from what the technician typed or dictated (speech-to-text output).
+// The AI in ChatGPT extracts fields itself; this parser serves the tablet and is a safety net.
+
+const NUM_WORDS = { // spoken digits in sk/cs/en/de/pl so dictated plates/km come out right
+  nula: '0', jedna: '1', jeden: '1', dva: '2', dve: '2', tri: '3', štyri: '4', styri: '4', čtyři: '4', päť: '5', pät: '5', pět: '5', šesť: '6', šest: '6', sedem: '7', sedm: '7', osem: '8', osm: '8', deväť: '9', devät: '9', devět: '9',
+  zero: '0', one: '1', two: '2', three: '3', four: '4', five: '5', six: '6', seven: '7', eight: '8', nine: '9',
+  null: '0', eins: '1', zwei: '2', drei: '3', vier: '4', fünf: '5', sechs: '6', sieben: '7', acht: '8', neun: '9',
+};
+
+function norm(text) {
+  return String(text || '').replace(/ /g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+const FUEL_WORDS = [
+  [/\b(elektr\w*|ev|electric|bev)\b/i, 'EV'], [/\b(hybrid\w*)\b/i, 'HYBRID'], [/\b(lpg)\b/i, 'LPG'], [/\b(cng)\b/i, 'CNG'],
+  [/\b(diesel|nafta|naft\w*|tdi|hdi|cdi|dci|crdi)\b/i, 'DIESEL'], [/\b(benz[ií]n\w*|petrol|gasoline|tsi|tfsi)\b/i, 'PETROL'],
+];
+
+/** Returns { fields, unparsed } – fields only contains what was recognised with confidence. */
+export function parseIntakeText(raw, { country = 'SK' } = {}) {
+  let text = norm(raw);
+  const fields = {};
+  if (!text) return { fields, unparsed: '' };
+  const lower = text.toLowerCase();
+
+  // VIN: a single 17-char token anywhere, or – right after the word VIN/FIN – dictated groups joined together
+  const tokens = text.toUpperCase().split(/[^A-Z0-9]+/).filter(Boolean);
+  const okVin = (v) => v.length === 17 && /[A-Z]/.test(v) && /[0-9]/.test(v) && decodeVin(v).valid;
+  const single = tokens.find(okVin);
+  if (single) fields.vin = single;
+  else {
+    const k = tokens.findIndex((t) => /^(VIN|FIN|VINKOD|ALVAZSZAM)$/.test(t));
+    if (k >= 0) {
+      let acc = '';
+      for (let j = k + 1; j < tokens.length && j <= k + 8 && acc.length < 17; j++) acc += tokens[j];
+      if (okVin(acc)) fields.vin = acc;
+    }
+  }
+
+  // mileage: "142 000 km", "142000 km", "stav km 142 tisíc", "nájazd 98500"
+  const km = lower.match(/(\d{1,3}(?:[ .]\d{3})+|\d{1,7})\s*(?:tis\p{L}*|k(?![\p{L}\d])|000)?\s*(km|kilometr\p{L}*|kilometer\p{L}*|m[ií]l\p{L}*)(?![\p{L}\d])/u)
+    || lower.match(/(?:stav\s*km|tachometer|tachometr|n[aá]jazd|najazden\p{L}*|najeto|mileage|kilometerstand|przebieg)\D{0,12}(\d{1,3}(?:[ .]\d{3})+|\d{1,7})(\s*tis\p{L}*)?/u);
+  if (km) {
+    let n = Number(km[1].replace(/[ .]/g, ''));
+    if (/tis/.test(km[0]) && n < 2000) n *= 1000;
+    if (n > 0 && n < 3000000) fields.mileage = n;
+  }
+
+  // phone: +421 900 123 456, 0900 123 456
+  const ph = text.match(/(\+\d{2,3}[\s/-]?\d{3}[\s/-]?\d{3}[\s/-]?\d{3,4}|\b0\d{3}[\s/-]?\d{3}[\s/-]?\d{3}\b)/);
+  if (ph) fields.customerPhone = ph[1].replace(/[\s/-]/g, ' ').trim();
+
+  const em = text.match(/[\w.+-]+@[\w-]+\.[\w.-]+/);
+  if (em) fields.customerEmail = em[0].toLowerCase();
+
+  // licence plate – after a keyword, or SK/CZ pattern (e.g. ZA 123AB, ZA-123AB, 1AB 2345)
+  const plateKw = text.match(/(?:EČV|ECV|ŠPZ|SPZ|plate|kennzeichen|rendszám|numer rej\w*)[:\s]+([A-Z0-9][A-Z0-9 -]{3,10}[A-Z0-9])/i);
+  const plateSk = text.toUpperCase().match(/\b([A-Z]{2})[ -]?(\d{3})[ -]?([A-Z]{2})\b/);
+  const plateCz = text.toUpperCase().match(/\b(\d[A-Z]\d)[ -]?(\d{4})\b/);
+  if (plateKw) fields.plate = plateKw[1].toUpperCase().replace(/-/g, ' ').trim();
+  else if (country === 'SK' && plateSk) fields.plate = `${plateSk[1]} ${plateSk[2]}${plateSk[3]}`;
+  else if (country === 'CZ' && plateCz) fields.plate = `${plateCz[1]} ${plateCz[2]}`;
+  else if (plateSk) fields.plate = `${plateSk[1]} ${plateSk[2]}${plateSk[3]}`;
+
+  for (const [re, f] of FUEL_WORDS) if (re.test(text)) { fields.fuel = f; break; }
+
+  // vehicle category: van / light commercial → N1, passenger car → M1
+  const B = '(?<![\\p{L}\\d])', E = '(?![\\p{L}\\d])';
+  if (new RegExp(`${B}(dod[aá]vk\\p{L}*|[uú][zž]itkov\\p{L}*|van|transporter|furgon\\p{L}*|dostawcz\\p{L}*|kisteherg\\p{L}*|pick-?up|N1)${E}`, 'iu').test(text)) fields.category = 'N1';
+  else if (new RegExp(`${B}(osobn\\p{L}*|osobák|passenger car|pkw|osobow\\p{L}*|személyaut\\p{L}*|M1)${E}`, 'iu').test(text)) fields.category = 'M1';
+  const wt = lower.match(/(\d{1,2}(?:[.,]\d{1,2})?)\s*(t|ton\w*)\b|(\d{3,5})\s*kg\b/);
+  if (wt && /hmotnos|weight|gewicht|masa|tömeg|ton|\bt\b|kg/.test(lower)) {
+    const kg = wt[3] ? Number(wt[3]) : Math.round(Number(wt[1].replace(',', '.')) * 1000);
+    if (kg >= 500 && kg <= 60000) fields.maxWeightKg = kg;
+  }
+
+  // fuel level: "nádrž 1/4", "palivo pol", "fuel 50 %", "nabitie 80 %"
+  const fl = lower.match(/(?:n[aá]dr[zž]\w*|palivo|fuel|tank|nabitie|nabit[ií]|battery|charge|bat[eé]ri\w*)\D{0,10}(\d\/\d|\d{1,3}\s*%|pln[aá]|full|pr[aá]zdn\w*|empty|pol\w*|half|rezerv\w*|reserve)/);
+  if (fl) {
+    const v = fl[1];
+    fields.fuelLevel = /pln|full/.test(v) ? '4/4' : /pr[aá]zd|empty|rezerv|reserve/.test(v) ? '0/4 (reserve)' : /pol|half/.test(v) ? '2/4' : v.replace(/\s+/g, '');
+  }
+
+  const yr = lower.match(/(?:rok|year|r\.\s?v\.|baujahr|rocznik|évjárat)\D{0,6}((?:19|20)\d{2})/);
+  if (yr) fields.year = Number(yr[1]);
+
+  const keys = lower.match(/(\d|jeden|jedna|dva|dve|tri|one|two|three)\s*(?:k[lľ][uúi]č\w*|keys?|schlüssel|klucz\w*|kulcs\w*)/);
+  if (keys) fields.keys = Number(NUM_WORDS[keys[1]] || keys[1]);
+
+  const waits = /(z[aá]kazn[ií]k\s*(po)?[cč]ak[aá]|customer\s*(is\s*)?waiting|kunde\s*wartet|klient\s*czeka)/i.test(text);
+  if (waits) fields.customerWaiting = true;
+
+  // keyword sections: "poškodenie: ...", "kontrolky: ...", "závada: ..."
+  const sections = {
+    damage: /(?:po[sš]koden\w*|škrabanc\w*|odren\w*|damage|scratch\w*|schaden|delle|uszkodz\w*|sérülés)/i,
+    warningLights: /(?:kontrolk\w*|warning lights?|warnleucht\w*|kontrolki|figyelmeztet\w*)/i,
+    complaint: /(?:z[aá]vad\w*|probl[eé]m\w*|po[zž]iadavk\w*|po[zž]adav\w*|complaint|issue|auftrag|usterk\w*|hiba)/i,
+    itemsInCar: /(?:vo vozidle|v aute|ve voze|items? in (?:the )?car|im auto|w aucie|autóban)/i,
+    tyres: /(?:pneumatik\w*|gum\w*|tyres?|tires?|reifen|opon\w*)/i,
+  };
+  for (const [key, re] of Object.entries(sections)) {
+    const m = text.match(new RegExp(re.source + '[^:]{0,20}?[:\\-–]\\s*([^.;\\n]{3,200})', 'iu'));
+    if (m) fields[key] = m[1].trim();
+  }
+  if (!fields.warningLights && /(bez kontrol\w*|[zž][ii]adn\w* kontrolk\w*|no warning lights)/i.test(text)) fields.warningLights = 'none';
+  if (!fields.damage && /(bez po[sš]koden\w*|no (visible )?damage|keine sch[aä]den)/i.test(text)) fields.damage = 'none';
+
+  // customer name: "zákazník Ján Novák", "meno Jana Malá", "customer John Smith" – keyword any case, name capitalised
+  const nmRe = /(?:z[aá]kazn[ií]k|z[aá]kaznic\p{L}*|majite[lľ]\p{L}*|meno|jm[eé]no|customer|owner|kunde|klient)[:\s]+((?:\p{Lu}[\p{L}'-]+\s?){2,3})/giu;
+  for (const m of text.matchAll(nmRe)) {
+    const name = m[1].trim().split(/\s+/).filter((w) => !/^(telef\p{L}*|tel|phone|čak\p{L}*|cak\p{L}*)$/iu.test(w)).join(' ');
+    if (name.split(' ').length >= 2) { fields.customerName = name; break; }
+  }
+
+  return { fields, unparsed: text };
+}
+
+/** Merge new values; never overwrite a value with empty. Returns changed keys. */
+export function mergeIntake(current, incoming) {
+  const out = { ...current };
+  const changed = [];
+  for (const f of INTAKE_FIELDS) {
+    let v = incoming[f.key];
+    if (v === undefined || v === null || v === '') continue;
+    if (f.key === 'vin') v = normalizeVin(v);
+    if (f.key === 'plate') v = String(v).toUpperCase().replace(/\s+/g, ' ').trim();
+    if (f.key === 'fuel') v = String(v).toUpperCase();
+    if (f.key === 'mileage' || f.key === 'maxWeightKg') v = Number(String(v).replace(/[^\d]/g, ''));
+    if (f.key === 'category') v = String(v).toUpperCase();
+    if (out[f.key] !== v) { out[f.key] = v; changed.push(f.key); }
+  }
+  return { data: out, changed };
+}
+
+export function intakeStatus(data) {
+  const missing = [];
+  const recommended = [];
+  const errors = [];
+  if (!data.plate && !data.vin) missing.push('plate');
+  for (const f of INTAKE_FIELDS) {
+    if (f.required === true && (data[f.key] === undefined || data[f.key] === '')) missing.push(f.key);
+    if (f.recommended && (data[f.key] === undefined || data[f.key] === '')) recommended.push(f.key);
+  }
+  if (data.category && !['M1', 'N1'].includes(data.category)) errors.push('category: Caree is for passenger cars (M1) and light commercial vehicles up to 3.5 t (N1) only');
+  if (data.maxWeightKg != null && data.maxWeightKg > MAX_WEIGHT_KG) errors.push(`maxWeightKg: ${data.maxWeightKg} kg is over 3,500 kg – Caree is for vehicles up to 3.5 t only`);
+  if (data.vin) { const d = decodeVin(data.vin); if (!d.valid) errors.push(`vin: ${d.errors.join(' ')}`); }
+  if (data.mileage != null && !(data.mileage > 0 && data.mileage < 3000000)) errors.push('mileage: not a plausible value');
+  if (data.fuel && !INTAKE_FIELDS.find((f) => f.key === 'fuel').enum.includes(data.fuel)) errors.push('fuel: use PETROL, DIESEL, LPG, CNG, HYBRID or EV');
+  if (data.customerPhone && !/^[+\d][\d\s/-]{6,}$/.test(data.customerPhone)) errors.push('customerPhone: not a phone number');
+  return { complete: missing.length === 0 && errors.length === 0, missing, recommended, errors };
+}

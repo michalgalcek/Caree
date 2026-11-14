@@ -65,7 +65,7 @@ export class Workshop {
   tryPlace(job, u) {
     const tasks = job.tasks;
     const bayType = tasks.find((t) => t.bay)?.bay || null;
-    for (const bay of this.baysFor(bayType)) {
+    for (const bay of this.baysFor(bayType).filter((b) => !job.vehicleKg || (b.maxKg ?? 3500) >= job.vehicleKg)) {
       let cursor = u;
       const assignments = [];
       let ok = true;

@@ -1,11 +1,13 @@
 # Caree
 
-AI asistent a riadiaci systém pre autoservisy – aplikácia pre ChatGPT (MCP / Apps SDK) + webové stránky pre vodičov a tablet pre mechanikov.
+AI asistent a riadiaci systém pre autoservisy **osobných áut (M1) a úžitkových vozidiel do 3,5 t (N1)** – aplikácia pre ChatGPT (MCP / Apps SDK) + webové stránky pre vodičov a tablet pre mechanikov. Ťažšie vozidlá, motocykle a autobusy aplikácia neprijme.
 Prevádzkovateľ: **housee s.r.o.**
 
 ## Čo Caree robí
 | Oblasť | Funkcia | Chyba konkurencie, ktorú rieši |
 |---|---|---|
+| Vstupná prehliadka | technik prijme auto písaním alebo hlasom (tablet: diktovanie v jazyku servisu; ChatGPT: hlasový režim); Caree rozpozná EČV, VIN, km, palivo, druh vozidla, hmotnosť, zákazníka, závadu, poškodenia a pýta sa len na chýbajúce údaje; známe auto doplní z databázy; po dokončení vznikne zákazka v poradí na plánovanie | – |
+| Rozsah 3,5 t | len M1 a N1 do 3 500 kg; nosnosť zdvihákov – dodávka nejde na slabší zdvihák; pravidlá STK pre N1 (kde nie sú nastavené, použije sa M1 a označí sa na overenie) | – |
 | Vozidlá | karta auta, kontrola VIN (I/O/Q, dĺžka, kontrolná číslica – v EÚ len varovanie), história, nájazd | – |
 | Kontroly | STK/EK, HU, MOT, ITV, APK, §57a… podľa krajiny; pravidlá s dátumom platnosti (napr. AT od 19. 5. 2027) | americké systémy nepoznajú európske lehoty |
 | Údržba | intervaly podľa času aj km, odhad nájazdu z histórie, EV bez výmeny oleja | – |
@@ -27,7 +29,7 @@ Jazyky zákazníckych stránok: en, sk, cs, de, pl, hu, fr, it, es, nl. ChatGPT 
 ## Spustenie
 ```bash
 npm install
-npm test                       # 21 testov: jadro + celý OAuth + MCP tok
+npm test                       # 32 testov: jadro, vstupná prehliadka, OAuth, MCP, reštart servera
 DEMO_SEED=1 npm start          # http://localhost:3000, demo: demo@caree.test / demo-password-123
 npm run annotations            # vygeneruje docs/TOOL_ANNOTATIONS.md
 ```
@@ -48,7 +50,8 @@ src/config/   countries.js (trhy, kontroly, DPH, meny), i18n.js
 src/core/     vin.js, inspection.js, estimator.js, scheduler.js, suppliers.js   (čistá logika, testovaná)
 src/services.js  biznis operácie, izolácia servisov (tenant_id), GDPR
 src/auth.js      OAuth 2.1 (PKCE, dynamická registrácia) nad MCP SDK
-src/mcp.js       24 nástrojov pre ChatGPT s anotáciami
+src/mcp.js       28 nástrojov pre ChatGPT s anotáciami
+src/core/intake.js  vstupná prehliadka: polia, rozpoznávanie diktátu, kontrola úplnosti
 src/web/         widget (MCP Apps UI), rezervácie, schvaľovanie, tablet PWA, právne stránky
 ```
 Úložisko: SQLite zabudované v Node (súbor na volume). Pre viac serverov neskôr PostgreSQL – SQL je v `services.js` a `db.js`.

@@ -16,7 +16,7 @@ export function privacyPage() {
   return page('Caree – Privacy policy', `
 <h1>Privacy policy</h1><p class="muted">Last updated ${esc(c.updated)}</p>
 <h2>Who we are</h2>
-<p>Caree is a workshop management assistant for car repair shops, available as an app in ChatGPT and on the web. It is operated by ${esc(c.name)}, ${esc(c.address)}, company ID ${esc(c.regNo)} ("we"). Contact: <a href="mailto:${esc(c.privacyEmail)}">${esc(c.privacyEmail)}</a>.</p>
+<p>Caree is a workshop management assistant for repair shops servicing passenger cars and light commercial vehicles up to 3.5 t, available as an app in ChatGPT and on the web. It is operated by ${esc(c.name)}, ${esc(c.address)}, company ID ${esc(c.regNo)} ("we"). Contact: <a href="mailto:${esc(c.privacyEmail)}">${esc(c.privacyEmail)}</a>.</p>
 <h2>Our role</h2>
 <ul>
 <li><b>Data of repair-shop customers</b> (drivers, their vehicles, repairs): the repair shop is the <b>controller</b>. We process this data only on the shop's instructions as a <b>processor</b> under a data processing agreement (Art. 28 GDPR, see <a href="/dpa">DPA</a>). Requests about this data should go to the repair shop; we help the shop answer them.</li>
@@ -51,7 +51,7 @@ export function termsPage() {
   return page('Caree – Terms of service', `
 <h1>Terms of service</h1><p class="muted">Last updated ${esc(c.updated)}</p>
 <p>These terms govern the use of Caree, operated by ${esc(c.name)}, ${esc(c.address)}, company ID ${esc(c.regNo)}.</p>
-<h2>1. Service</h2><p>Caree helps repair shops manage vehicles, bookings, estimates, inspections, planning and parts orders. Drivers can request bookings and approve or decline recommended work.</p>
+<h2>1. Service</h2><p>Caree helps repair shops for passenger cars (M1) and light commercial vehicles up to 3.5 t (N1) manage vehicle intake, vehicles, bookings, estimates, inspections, planning and parts orders. Drivers can request bookings and approve or decline recommended work.</p>
 <h2>2. Estimates and AI suggestions</h2><p>Time and price estimates, inspection due dates and diagnostic suggestions are <b>guidance</b>. The repair shop is responsible for the final diagnosis, price and work. Statutory inspection dates must be checked against the vehicle documents. No work is added to a job without the driver's approval through the shop.</p>
 <h2>3. Accounts</h2><p>Shop accounts are for businesses. Keep sign-in details confidential. The shop is responsible for its staff's use.</p>
 <h2>4. Fair terms</h2><ul><li>Monthly plans can be cancelled at any time, effective at the end of the paid month – no hidden notice periods.</li><li>The shop can export all its data at any time in open formats (JSON/CSV).</li><li>Price changes are announced at least 30 days in advance.</li></ul>
