@@ -1,11 +1,11 @@
 # Fly.io – EU region (Frankfurt) to keep shop data in the EU.
-app = "caree"
+app = "caree-housee"
 primary_region = "fra"
 
 [build]
 
 [env]
-  PUBLIC_URL = "https://caree.housee.sk"
+  PUBLIC_URL = "https://caree-housee.fly.dev"  # switch to https://caree.housee.sk after DNS + certificate
   NODE_ENV = "production"
   COMPANY_NAME = "housee s.r.o."
   COMPANY_ADDRESS = "Ovčiarsko 210, 010 04 Ovčiarsko, Slovakia; registered in the Business Register of the District Court Žilina, section Sro, file 71188/L"
@@ -14,6 +14,10 @@ primary_region = "fra"
   PRIVACY_EMAIL = "housee@housee.sk"
   DEMO_SEED = "1"
   DEMO_EMAIL = "demo@caree.test"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"
 
 [[mounts]]
   source = "caree_data"
