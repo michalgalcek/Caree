@@ -14,7 +14,9 @@ import { localNow } from './services.js';
 
 export function createApp({ db = openDb(), baseUrl = process.env.PUBLIC_URL || 'http://localhost:3000', fetchImpl, seed = process.env.DEMO_SEED === '1' } = {}) {
   const svc = new Caree(db, { fetchImpl });
-  if (seed) seedDemo(svc);
+  if (seed) {
+    try { seedDemo(svc); } catch (e) { console.warn(`[caree] demo account not created: ${e.message}`); }
+  }
   const provider = new CareeOAuthProvider(db, svc);
   const app = express();
   app.disable('x-powered-by');
