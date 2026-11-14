@@ -1,36 +1,39 @@
-# Fly.io – EU region (Frankfurt) to keep shop data in the EU.
-app = "caree-housee"
-primary_region = "fra"
+# fly.toml app configuration file generated for caree-housee on 2026-11-14T21:28:44Z
+#
+# See https://docs.fly.io/reference/configuration for information about how to use this file.
+#
+
+app = 'caree-housee'
+primary_region = 'fra'
 
 [build]
-
 [env]
-  PUBLIC_URL = "https://caree-housee.fly.dev"  # switch to https://caree.housee.sk after DNS + certificate
-  NODE_ENV = "production"
-  COMPANY_NAME = "housee s.r.o."
-  COMPANY_ADDRESS = "Ovčiarsko 210, 010 04 Ovčiarsko, Slovakia; registered in the Business Register of the District Court Žilina, section Sro, file 71188/L"
-  COMPANY_ID = "52059022 (VAT ID SK2120875449)"
-  SUPPORT_EMAIL = "housee@housee.sk"
-  PRIVACY_EMAIL = "housee@housee.sk"
-  DEMO_SEED = "1"
-  DEMO_EMAIL = "demo@caree.test"
-
-[[vm]]
-  size = "shared-cpu-1x"
-  memory = "512mb"
+  COMPANY_ADDRESS = 'Ovčiarsko 210, 010 04 Ovčiarsko, Slovakia; registered in the Business Register of the District Court Žilina, section Sro, file 71188/L'
+  COMPANY_ID = '52059022 (VAT ID SK2120875449)'
+  COMPANY_NAME = 'housee s.r.o.'
+  DEMO_EMAIL = 'demo@caree.test'
+  DEMO_SEED = '1'
+  NODE_ENV = 'production'
+  PRIVACY_EMAIL = 'housee@housee.sk'
+  PUBLIC_URL = 'https://caree-housee.fly.dev'
+  SUPPORT_EMAIL = 'housee@housee.sk'
 
 [[mounts]]
-  source = "caree_data"
-  destination = "/data"
+  source = 'caree_data'
+  destination = '/data'
 
 [http_service]
   internal_port = 8080
   force_https = true
-  auto_stop_machines = "off"
+  auto_stop_machines = 'off'
   min_machines_running = 1
 
   [[http_service.checks]]
-    interval = "30s"
-    timeout = "5s"
-    method = "GET"
-    path = "/health"
+    interval = '30s'
+    timeout = '5s'
+    method = 'GET'
+    path = '/health'
+
+[[vm]]
+  size = 'shared-cpu-1x'
+  memory = '512mb'
