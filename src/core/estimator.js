@@ -74,6 +74,7 @@ export function estimate(tenant, ops, { partPrices = {} } = {}) {
   const codes = ops.map((o) => o.code);
   const lines = [];
   const notes = [];
+  const overlaps = [];
   // remove operations included in another selected op
   const included = new Set();
   for (const c of codes) for (const inc of OPERATIONS[c]?.includes || []) if (codes.includes(inc)) included.add(inc);
@@ -96,6 +97,7 @@ export function estimate(tenant, ops, { partPrices = {} } = {}) {
         seenOverlap.add(key);
         hours = Math.max(0.1, hours - saving);
         notes.push(`${op.name} + ${OPERATIONS[other].name}: shared access, ${saving} h saved.`);
+        overlaps.push({ codes: [o.code, other], hours: saving });
       }
     }
     for (const f of op.followUp || []) if (!codes.includes(f)) followUps.add(f);
@@ -127,6 +129,7 @@ export function estimate(tenant, ops, { partPrices = {} } = {}) {
     complete: s.laborRate != null && partLines.every((p) => p.unitPrice != null),
     suggestedFollowUps: [...followUps].map((c) => ({ code: c, name: OPERATIONS[c].name, why: 'usually needed after the selected work' })),
     notes,
+    overlaps,
     disclaimer: 'Estimate. If more work is found the shop asks the customer before doing it.',
   };
 }

@@ -10,7 +10,9 @@ button{background:var(--acc);color:#fff;border:0;border-radius:8px;padding:12px 
 .red{color:var(--red)}.amber{color:var(--amber)}.green{color:var(--green)}table{width:100%;border-collapse:collapse}td,th{padding:6px 4px;border-bottom:1px solid var(--line);text-align:left}
 .row{display:flex;gap:8px;flex-wrap:wrap}.chk{display:flex;gap:8px;align-items:flex-start;font-weight:400}.chk input{width:auto;margin-top:5px}`;
 
-export function page(title, body, { lang = 'en', head = '' } = {}) {
-  return `<!doctype html><html lang="${esc(lang)}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+export function page(title, body, { lang = 'en', head = '', noTranslate = false } = {}) {
+  // noTranslate: app screens are already localised; stops browsers auto-translating the brand ("Caree" -> "career").
+  const nt = noTranslate ? ' translate="no"' : '';
+  return `<!doctype html><html lang="${esc(lang)}"${nt}><head>${noTranslate ? '<meta name="google" content="notranslate">' : ''}<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${esc(title)}</title><meta name="robots" content="noindex"><style>${CSS}</style>${head}</head><body><main>${body}</main></body></html>`;
 }

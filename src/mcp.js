@@ -5,7 +5,7 @@ import { WIDGET_URI, WIDGET_HTML } from './web/widget.js';
 import { decodeVin } from './core/vin.js';
 import { searchOperations, OPERATIONS } from './core/estimator.js';
 import { getCountry, COUNTRIES, effectiveSettings } from './config/countries.js';
-import { strings } from './config/i18n.js';
+import { strings, widgetStrings, localNames } from './config/i18n.js';
 
 const RO = { readOnlyHint: true, destructiveHint: false, openWorldHint: false, idempotentHint: true };
 const WRITE = { readOnlyHint: false, destructiveHint: false, openWorldHint: false };
@@ -31,7 +31,12 @@ export function buildMcpServer(svc, { baseUrl }) {
     return a;
   };
   const need = (who, role) => { if ((ROLE_RANK[who.role] || 0) < ROLE_RANK[role]) throw Object.assign(new Error(`Your role (${who.role}) cannot do this – ask the shop owner.`), { code: 'forbidden' }); };
-  const view = (tid, v, data) => { const s = svc.settings(tid); const L = strings(s.language); return { view: v, locale: s.locale, currency: s.currency, labels: { book: L.book, labor: L.labor, parts: L.parts, total: L.total }, ...data }; };
+  const view = (tid, v, data) => {
+    const s = svc.settings(tid); const L = strings(s.language); const ui = widgetStrings(s.language);
+    const { titleKey, titleArg, ...rest } = data;
+    const title = titleKey ? [(ui[titleKey] || L[titleKey] || titleKey).replace('{n}', titleArg ?? ''), titleKey === 'dueIn' ? '' : (titleArg ?? '')].filter(Boolean).join(' ') : rest.title;
+    return { view: v, locale: s.locale, currency: s.currency, labels: { book: L.book, labor: L.labor, parts: L.parts, total: L.total, estimateNote: L.estimateNote }, ui, names: localNames(s.language), ...rest, title };
+  };
 
   function tool(name, { title, description, input = {}, annotations, ui = false, why }, handler) {
     TOOL_ANNOTATION_NOTES[name] = { title, annotations, why };
@@ -94,7 +99,7 @@ export function buildMcpServer(svc, { baseUrl }) {
     const ni = card.nextInspection;
     return {
       text: `${v.plate || ''} ${v.make || ''} ${v.model || ''}. ${ni.due ? `${ni.name} due ${ni.due}${ni.assumedFromRegistration ? ' (calculated from first registration – confirm in documents)' : ''}.` : `Inspection: ${ni.reason}.`} ${card.maintenance.items.slice(0, 3).map((m) => `${m.name} ~${m.due}`).join(', ')}${card.declinedWorkToRemind.length ? `. Remind: ${card.declinedWorkToRemind.map((d) => d.item).join(', ')}` : ''}`,
-      data: view(a.tenantId, 'vehicle', { title: 'Vehicle', ...card, customer: card.customer ? { name: card.customer.name } : null }),
+      data: view(a.tenantId, 'vehicle', { titleKey: 'vehicle', ...card, customer: card.customer ? { name: card.customer.name } : null }),
     };
   });
 
@@ -123,7 +128,7 @@ export function buildMcpServer(svc, { baseUrl }) {
     const a = ctx(extra);
     const list = svc.upcoming(a.tenantId, days);
     const rows = list.map((x) => [x.plate || '-', [x.make, x.model].filter(Boolean).join(' '), x.inspection ? `${x.inspection.name} ${x.inspection.due}` : '', x.maintenance.map((m) => m.name).join(', '), x.alreadyBooked ? 'booked' : '']);
-    return { text: list.length ? `${list.length} vehicle(s) need attention in ${days} days.` : 'Nothing due in this period.', data: view(a.tenantId, 'list', { title: `Due in ${days} days`, rows, items: list }) };
+    return { text: list.length ? `${list.length} vehicle(s) need attention in ${days} days.` : 'Nothing due in this period.', data: view(a.tenantId, 'list', { titleKey: 'dueIn', titleArg: days, rows, items: list }) };
   });
 
   // ---------------- estimates & booking
@@ -133,7 +138,7 @@ export function buildMcpServer(svc, { baseUrl }) {
   }, async ({ operations, vehicleId }, extra) => {
     const a = ctx(extra);
     const e = svc.estimateFor(a.tenantId, { vehicleId, codes: operations });
-    return { text: `Estimate: ${e.labourHours} h, total ${e.totals.gross} ${e.currency} incl. ${e.vatRate} % tax.${e.notes.length ? ' ' + e.notes.join(' ') : ''}${e.suggestedFollowUps.length ? ' Usually also needed: ' + e.suggestedFollowUps.map((f) => f.name).join(', ') + '.' : ''}`, data: view(a.tenantId, 'estimate', { title: 'Estimate', ...e }) };
+    return { text: `Estimate: ${e.labourHours} h, total ${e.totals.gross} ${e.currency} incl. ${e.vatRate} % tax.${e.notes.length ? ' ' + e.notes.join(' ') : ''}${e.suggestedFollowUps.length ? ' Usually also needed: ' + e.suggestedFollowUps.map((f) => f.name).join(', ') + '.' : ''}`, data: view(a.tenantId, 'estimate', { titleKey: 'estimate', ...e }) };
   });
 
   tool('find_free_slots', {
@@ -143,7 +148,7 @@ export function buildMcpServer(svc, { baseUrl }) {
   }, async ({ operations, vehicleId, earliest, count }, extra) => {
     const a = ctx(extra);
     const r = svc.freeSlots(a.tenantId, { codes: operations, vehicleId, earliest, count });
-    return { text: r.slots.length ? `Free: ${r.slots.map((s) => s.start.replace('T', ' ')).join(', ')} (${r.timezone}).` : 'No free slot in the next 3 weeks.', data: view(a.tenantId, 'slots', { title: 'Free slots', ...r, vehicleId, operations }) };
+    return { text: r.slots.length ? `Free: ${r.slots.map((s) => s.start.replace('T', ' ')).join(', ')} (${r.timezone}).` : 'No free slot in the next 3 weeks.', data: view(a.tenantId, 'slots', { titleKey: 'freeSlots', ...r, vehicleId, operations }) };
   });
 
   tool('book_appointment', {
@@ -233,7 +238,7 @@ export function buildMcpServer(svc, { baseUrl }) {
   }, async ({ date }, extra) => {
     const a = ctx(extra);
     const p = svc.plan(a.tenantId, date);
-    return { text: `${p.date}: ${p.jobs.length} job(s). ${p.utilisation.open ? p.utilisation.mechanics.map((m) => `${m.name} ${m.busyPct} %`).join(', ') : 'Closed.'}`, data: view(a.tenantId, 'plan', { title: `Plan ${p.date}`, ...p }) };
+    return { text: `${p.date}: ${p.jobs.length} job(s). ${p.utilisation.open ? p.utilisation.mechanics.map((m) => `${m.name} ${m.busyPct} %`).join(', ') : 'Closed.'}`, data: view(a.tenantId, 'plan', { titleKey: 'plan', titleArg: p.date, ...p }) };
   });
 
   tool('booking_requests', {
@@ -305,7 +310,7 @@ export function buildMcpServer(svc, { baseUrl }) {
   }, async ({ text, fields }, extra) => {
     const a = ctx(extra); need(a, 'mechanic');
     const r = svc.startIntake(a.tenantId, { text, fields: fields || {}, actor: a.email });
-    return { text: intakeText(r) + (r.knownVehicle ? ' Vehicle is already in the database – data prefilled.' : ''), data: view(a.tenantId, 'intake', { title: `Intake ${r.ref}`, ...r }) };
+    return { text: intakeText(r) + (r.knownVehicle ? ' Vehicle is already in the database – data prefilled.' : ''), data: view(a.tenantId, 'intake', { titleKey: 'intake', titleArg: r.ref, ...r }) };
   });
 
   tool('update_vehicle_intake', {
@@ -314,7 +319,7 @@ export function buildMcpServer(svc, { baseUrl }) {
   }, async ({ ref, text, fields }, extra) => {
     const a = ctx(extra); need(a, 'mechanic');
     const r = svc.updateIntake(a.tenantId, ref, { text, fields: fields || {}, actor: a.email });
-    return { text: intakeText(r), data: view(a.tenantId, 'intake', { title: `Intake ${r.ref}`, ...r }) };
+    return { text: intakeText(r), data: view(a.tenantId, 'intake', { titleKey: 'intake', titleArg: r.ref, ...r }) };
   });
 
   tool('complete_vehicle_intake', {
@@ -323,7 +328,7 @@ export function buildMcpServer(svc, { baseUrl }) {
   }, async ({ ref }, extra) => {
     const a = ctx(extra); need(a, 'mechanic');
     const r = svc.completeIntake(a.tenantId, ref, { actor: a.email });
-    return { text: `Intake ${r.ref} completed. Job ${r.jobRef} is waiting in the planning queue. Next: estimate the work and book a slot.`, data: view(a.tenantId, 'intake', { title: `Intake ${r.ref}`, ...r }) };
+    return { text: `Intake ${r.ref} completed. Job ${r.jobRef} is waiting in the planning queue. Next: estimate the work and book a slot.`, data: view(a.tenantId, 'intake', { titleKey: 'intake', titleArg: r.ref, ...r }) };
   });
 
   tool('list_open_intakes', {

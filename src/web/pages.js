@@ -11,7 +11,7 @@ export function publicRouter(svc, { baseUrl }) {
   const form = express.urlencoded({ extended: false, limit: '20kb' });
 
   r.get('/', (req, res) => res.type('html').send(page('Caree – AI workshop assistant', `
-    <h1>Caree</h1><p>The AI workshop assistant for repair shops servicing passenger cars and vans up to 3.5 t – vehicle intake by voice, bookings, estimates, digital inspections, workshop planning and parts ordering, right inside ChatGPT.</p>
+    <h1 translate="no">Caree</h1><p>The AI workshop assistant for repair shops servicing passenger cars and vans up to 3.5 t – vehicle intake by voice, bookings, estimates, digital inspections, workshop planning and parts ordering, right inside ChatGPT.</p>
     <p class="muted">Available in ${LANGUAGES.length} languages with country rules for Slovakia, Czechia, Germany, Austria, Poland, Hungary, France, Italy, Spain, the Netherlands, Belgium, the UK, the US, Canada and Australia.</p>
     <p><a href="/privacy">Privacy</a> · <a href="/terms">Terms</a> · <a href="/dpa">DPA</a> · <a href="/support">Support</a></p>`)));
   r.get('/privacy', (_q, res) => res.type('html').send(privacyPage()));

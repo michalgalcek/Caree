@@ -15,9 +15,10 @@ export function seedDemo(svc, { email = (process.env.DEMO_EMAIL || 'demo@caree.t
   }
   const t = svc.createTenant({ name: 'Demo Autoservis', country, settings: { laborRate: 48, opening: { mon: [7, 16], tue: [7, 16], wed: [7, 16], thu: [7, 16], fri: [7, 15] } } });
   svc.createUser(t.id, { email, password, role: 'owner', name: 'Demo Owner' });
-  svc.addBay(t.id, { name: 'Lift 1', type: 'lift' });
-  svc.addBay(t.id, { name: 'Lift 2', type: 'lift' });
-  svc.addBay(t.id, { name: 'Tyre bay', type: 'tyre' });
+  const BAYS = { SK: ['Zdvihák 1', 'Zdvihák 2', 'Pneuservis'], CZ: ['Zvedák 1', 'Zvedák 2', 'Pneuservis'], DE: ['Hebebühne 1', 'Hebebühne 2', 'Reifenplatz'], AT: ['Hebebühne 1', 'Hebebühne 2', 'Reifenplatz'], PL: ['Podnośnik 1', 'Podnośnik 2', 'Wulkanizacja'], HU: ['Emelő 1', 'Emelő 2', 'Gumiszerviz'] }[country] || ['Lift 1', 'Lift 2', 'Tyre bay'];
+  svc.addBay(t.id, { name: BAYS[0], type: 'lift' });
+  svc.addBay(t.id, { name: BAYS[1], type: 'lift' });
+  svc.addBay(t.id, { name: BAYS[2], type: 'tyre' });
   svc.addMechanic(t.id, { name: 'Peter', skills: ['general', 'engine', 'drivetrain', 'diagnostics'] });
   svc.addMechanic(t.id, { name: 'Marek', skills: ['general', 'drivetrain', 'tyres', 'alignment'] });
   svc.addMechanic(t.id, { name: 'Jana', skills: ['general', 'electrical', 'diagnostics', 'ac', 'hv'] });

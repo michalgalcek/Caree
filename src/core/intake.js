@@ -61,6 +61,43 @@ const FUEL_WORDS = [
   [/\b(diesel|nafta|naft\w*|tdi|hdi|cdi|dci|crdi)\b/i, 'DIESEL'], [/\b(benz[ií]n\w*|petrol|gasoline|tsi|tfsi)\b/i, 'PETROL'],
 ];
 
+// Makes sold as M1/N1 in Europe and our tier-3 markets. "Škoda" needs a capital or a Škoda model (lower-case
+// "škoda" is also the Slovak/Czech word for damage).
+const MAKES = [
+  ['Škoda', /(?<![\p{L}])(?:Škoda|Skoda|ŠKODA|SKODA|[sš]koda(?=\s+(?:octavi|fabi|superb|kodiaq|karoq|kamiq|scala|enyaq|rapid|yeti|roomster|citigo|elroq)))(?![\p{L}])/u],
+  ['Volkswagen', /(?<![\p{L}])(?:volkswagen|vw)(?![\p{L}])/iu], ['Mercedes-Benz', /(?<![\p{L}])(?:mercedes(?:[- ]benz)?|merced\p{L}*)(?![\p{L}])/iu],
+  ['BMW', /(?<![\p{L}])bmw(?![\p{L}])/iu], ['Audi', /(?<![\p{L}])audi(?![\p{L}])/iu], ['Opel', /(?<![\p{L}])opel(?![\p{L}])/iu], ['Vauxhall', /(?<![\p{L}])vauxhall(?![\p{L}])/iu],
+  ['Ford', /(?<![\p{L}])ford(?![\p{L}])/iu], ['Renault', /(?<![\p{L}])renault(?![\p{L}])/iu], ['Peugeot', /(?<![\p{L}])peugeot(?![\p{L}])/iu],
+  ['Citroën', /(?<![\p{L}])citro[eë]n(?![\p{L}])/iu], ['Dacia', /(?<![\p{L}])dacia(?![\p{L}])/iu], ['Toyota', /(?<![\p{L}])toyot\p{L}*(?![\p{L}])/iu],
+  ['Hyundai', /(?<![\p{L}])hyundai(?![\p{L}])/iu], ['Kia', /(?<![\p{L}])kia(?![\p{L}])/iu], ['Fiat', /(?<![\p{L}])fiat(?![\p{L}])/iu],
+  ['Seat', /(?<![\p{L}])(?:SEAT|Seat)(?![\p{L}])/u], ['Cupra', /(?<![\p{L}])cupra(?![\p{L}])/iu], ['Volvo', /(?<![\p{L}])volvo(?![\p{L}])/iu],
+  ['Mazda', /(?<![\p{L}])mazda(?![\p{L}])/iu], ['Nissan', /(?<![\p{L}])nissan(?![\p{L}])/iu], ['Honda', /(?<![\p{L}])honda(?![\p{L}])/iu],
+  ['Suzuki', /(?<![\p{L}])suzuki(?![\p{L}])/iu], ['Mitsubishi', /(?<![\p{L}])mitsubishi(?![\p{L}])/iu], ['Tesla', /(?<![\p{L}])tesla(?![\p{L}])/iu],
+  ['Iveco', /(?<![\p{L}])iveco(?![\p{L}])/iu], ['Jeep', /(?<![\p{L}])jeep(?![\p{L}])/iu], ['Land Rover', /(?<![\p{L}])land[- ]?rover(?![\p{L}])/iu],
+  ['Mini', /(?<![\p{L}])MINI|Mini(?![\p{L}])/u], ['Porsche', /(?<![\p{L}])porsche(?![\p{L}])/iu], ['Alfa Romeo', /(?<![\p{L}])alfa(?:[- ]romeo)?(?![\p{L}])/iu],
+  ['Lexus', /(?<![\p{L}])lexus(?![\p{L}])/iu], ['Subaru', /(?<![\p{L}])subaru(?![\p{L}])/iu], ['MG', /(?<![\p{L}])MG(?![\p{L}])/u],
+  ['BYD', /(?<![\p{L}])byd(?![\p{L}])/iu], ['DS', /(?<![\p{L}])DS(?=\s*\d)/u], ['Chevrolet', /(?<![\p{L}])chevrolet(?![\p{L}])/iu],
+  ['Chrysler', /(?<![\p{L}])chrysler(?![\p{L}])/iu], ['Dodge', /(?<![\p{L}])dodge(?![\p{L}])/iu], ['RAM', /(?<![\p{L}])RAM(?=\s+\d)/u],
+  ['GMC', /(?<![\p{L}])gmc(?![\p{L}])/iu], ['Holden', /(?<![\p{L}])holden(?![\p{L}])/iu], ['Isuzu', /(?<![\p{L}])isuzu(?![\p{L}])/iu],
+  ['Lancia', /(?<![\p{L}])lancia(?![\p{L}])/iu], ['Smart', /(?<![\p{L}])smart(?=\s+(?:fortwo|forfour|#?\d))/iu],
+];
+const MODEL_STOP = /^(?:diesel|nafta|naft\p{L}*|benz\p{L}*|petrol|elektr\p{L}*|hybrid\p{L}*|lpg|cng|tdi|tsi|tfsi|hdi|cdi|dci|crdi|osobn\p{L}*|dod[aá]vk\p{L}*|[uú][zž]itkov\p{L}*|auto|vozidlo|car|van|rok|year|r|v|z|s|a|so|km|e[čc]v|spz|špz|vin|stav|n[aá]jazd|z[aá]kazn\p{L}*|kombi$)$/iu;
+function findMakeModel(text) {
+  for (const [make, re] of MAKES) {
+    const m = text.match(re); if (!m) continue;
+    const rest = text.slice(m.index + m[0].length).replace(/^[\s,:-]+/, '').split(/[\s,;.]+/).filter(Boolean);
+    const model = [];
+    for (const w of rest.slice(0, 3)) {
+      if (MODEL_STOP.test(w) || /^(?:19|20)\d{2}$/.test(w) || /^\d{4,}$/.test(w) || /^\d+\s*km$/i.test(w)) break;
+      if (model.length && !(/\d/.test(w) || /^\p{Lu}/u.test(w))) break;
+      model.push(w);
+      if (model.length === 2) break;
+    }
+    return { make, model: model.length ? model.join(' ').replace(/^\p{Ll}/u, (c) => c.toUpperCase()) : null };
+  }
+  return {};
+}
+
 /** Returns { fields, unparsed } – fields only contains what was recognised with confidence. */
 export function parseIntakeText(raw, { country = 'SK' } = {}) {
   let text = norm(raw);
@@ -83,10 +120,10 @@ export function parseIntakeText(raw, { country = 'SK' } = {}) {
   }
 
   // mileage: "142 000 km", "142000 km", "stav km 142 tisíc", "nájazd 98500"
-  const km = lower.match(/(\d{1,3}(?:[ .]\d{3})+|\d{1,7})\s*(?:tis\p{L}*|k(?![\p{L}\d])|000)?\s*(km|kilometr\p{L}*|kilometer\p{L}*|m[ií]l\p{L}*)(?![\p{L}\d])/u)
+  const km = lower.match(/(\d{1,3}(?:[ .]\d{3}|,\d{3})+|\d{1,7})\s*(?:tis\p{L}*|k(?![\p{L}\d])|000)?\s*(km|kilometr\p{L}*|kilometer\p{L}*|m[ií]l\p{L}*)(?![\p{L}\d])/u)
     || lower.match(/(?:stav\s*km|tachometer|tachometr|n[aá]jazd|najazden\p{L}*|najeto|mileage|kilometerstand|przebieg)\D{0,12}(\d{1,3}(?:[ .]\d{3})+|\d{1,7})(\s*tis\p{L}*)?/u);
   if (km) {
-    let n = Number(km[1].replace(/[ .]/g, ''));
+    let n = Number(km[1].replace(/[ .,]/g, ''));
     if (/tis/.test(km[0]) && n < 2000) n *= 1000;
     if (n > 0 && n < 3000000) fields.mileage = n;
   }
@@ -126,8 +163,14 @@ export function parseIntakeText(raw, { country = 'SK' } = {}) {
     fields.fuelLevel = /pln|full/.test(v) ? '4/4' : /pr[aá]zd|empty|rezerv|reserve/.test(v) ? '0/4 (reserve)' : /pol|half/.test(v) ? '2/4' : v.replace(/\s+/g, '');
   }
 
-  const yr = lower.match(/(?:rok|year|r\.\s?v\.|baujahr|rocznik|évjárat)\D{0,6}((?:19|20)\d{2})/);
+  const yr = lower.match(/(?:rok|year|r\.\s?v\.|baujahr|rocznik|évjárat)\D{0,6}((?:19|20)\d{2})/)
+    || lower.match(/(?<![\d.\/-])((?:19[89]|20[0-4])\d)(?![\d.\/-])(?!\s*(?:km|tis|kg|eur|€))/u);
   if (yr) fields.year = Number(yr[1]);
+
+  // make + model: "Škoda Octavia", "VW Transporter T6", "Mercedes-Benz Sprinter"
+  const mm = findMakeModel(text);
+  if (mm.make) fields.make = mm.make;
+  if (mm.model) fields.model = mm.model;
 
   const keys = lower.match(/(\d|jeden|jedna|dva|dve|tri|one|two|three)\s*(?:k[lľ][uúi]č\w*|keys?|schlüssel|klucz\w*|kulcs\w*)/);
   if (keys) fields.keys = Number(NUM_WORDS[keys[1]] || keys[1]);
@@ -135,20 +178,35 @@ export function parseIntakeText(raw, { country = 'SK' } = {}) {
   const waits = /(z[aá]kazn[ií]k\s*(po)?[cč]ak[aá]|customer\s*(is\s*)?waiting|kunde\s*wartet|klient\s*czeka)/i.test(text);
   if (waits) fields.customerWaiting = true;
 
-  // keyword sections: "poškodenie: ...", "kontrolky: ...", "závada: ..."
+  // keyword sections: "poškodenie: ...", "kontrolky: ...", "závada: ..." – a value ends at the next section,
+  // at another dictated field ("dva kľúče", "zákazník …", "54 tisíc km") or at . ; newline
   const sections = {
-    damage: /(?:po[sš]koden\w*|škrabanc\w*|odren\w*|damage|scratch\w*|schaden|delle|uszkodz\w*|sérülés)/i,
-    warningLights: /(?:kontrolk\w*|warning lights?|warnleucht\w*|kontrolki|figyelmeztet\w*)/i,
-    complaint: /(?:z[aá]vad\w*|probl[eé]m\w*|po[zž]iadavk\w*|po[zž]adav\w*|complaint|issue|auftrag|usterk\w*|hiba)/i,
-    itemsInCar: /(?:vo vozidle|v aute|ve voze|items? in (?:the )?car|im auto|w aucie|autóban)/i,
-    tyres: /(?:pneumatik\w*|gum\w*|tyres?|tires?|reifen|opon\w*)/i,
+    damage: /(?:po[sš]koden\p{L}*|[sš]krabanc\p{L}*|damage|scratch\p{L}*|schaden|delle|uszkodz\p{L}*|sérülés)/iu,
+    warningLights: /(?:kontrolk\p{L}*|warning lights?|warnleucht\p{L}*|figyelmeztet\p{L}*)/iu,
+    complaint: /(?:z[aá]vad\p{L}*|probl[eé]m\p{L}*|po[zž]iadavk\p{L}*|po[zž]adav\p{L}*|complaint|issue|auftrag|usterk\p{L}*|hiba)/iu,
+    itemsInCar: /(?:vo vozidle|v aute|ve voze|items? in (?:the )?car|im auto|w aucie|autóban)/iu,
+    tyres: /(?:pneumatik\p{L}*|tyres?|tires?|reifen|opon\p{L}*)/iu,
   };
+  const starts = [];
   for (const [key, re] of Object.entries(sections)) {
-    const m = text.match(new RegExp(re.source + '[^:]{0,20}?[:\\-–]\\s*([^.;\\n]{3,200})', 'iu'));
-    if (m) fields[key] = m[1].trim();
+    for (const m of text.matchAll(new RegExp('(?<![\\p{L}\\d])' + re.source + '[^:\\n]{0,20}?\\s*[:–]\\s*', 'giu'))) starts.push({ key, at: m.index, valueAt: m.index + m[0].length });
   }
-  if (!fields.warningLights && /(bez kontrol\w*|[zž][ii]adn\w* kontrolk\w*|no warning lights)/i.test(text)) fields.warningLights = 'none';
-  if (!fields.damage && /(bez po[sš]koden\w*|no (visible )?damage|keine sch[aä]den)/i.test(text)) fields.damage = 'none';
+  starts.sort((a, b) => a.at - b.at);
+  const STOP = new RegExp('(?<![\\p{L}\\d])(?:(?:\\d|jeden|jedna|dva|dve|tri|one|two|three)\\s*(?:k[lľ][uúi]\\p{L}*|keys?|schlüssel|klucz\\p{L}*|kulcs\\p{L}*)|z[aá]kazn[ií]\\p{L}*|majite[lľ]\\p{L}*|customer|kunde|klient|n[aá]dr[zž]\\p{L}*|tankol\\p{L}*|E[ČC]V|[SŠ]PZ|VIN|telef\\p{L}*|\\d[\\d .]*\\s*(?:tis\\p{L}*\\s*)?km)(?![\\p{L}])', 'iu');
+  for (let i = 0; i < starts.length; i++) {
+    const st = starts[i]; if (fields[st.key]) continue;
+    let end = i + 1 < starts.length ? starts[i + 1].at : text.length;
+    let v = text.slice(st.valueAt, end);
+    const cut = v.search(/[.;\n]/); if (cut >= 0) v = v.slice(0, cut);
+    const stop = v.search(STOP); if (stop > 0) v = v.slice(0, stop);
+    v = v.replace(/[\s,–-]+$/u, '').trim();
+    if (v.length >= 2) fields[st.key] = v.slice(0, 200);
+  }
+  const NONE = /^(?:[zž][ií]adn\p{L}*|nesviet\p{L}*|nie|none|no|off|ok|keine|brak|nincs|bez\b.*)$/iu;
+  if (fields.warningLights && NONE.test(fields.warningLights)) fields.warningLights = 'none';
+  if (fields.damage && NONE.test(fields.damage)) fields.damage = 'none';
+  if (!fields.warningLights && /(bez kontrol\p{L}*|[zž][ií]adn\p{L}* kontrolk\p{L}*|kontrolk\p{L}*\s+(?:[zž][ií]adn\p{L}*|nesviet\p{L}*|nesvít\p{L}*|ok)|no warning lights)/iu.test(text)) fields.warningLights = 'none';
+  if (!fields.damage && /(bez po[sš]koden\p{L}*|no (visible )?damage|keine sch[aä]den)/iu.test(text)) fields.damage = 'none';
 
   // customer name: "zákazník Ján Novák", "meno Jana Malá", "customer John Smith" – keyword any case, name capitalised
   const nmRe = /(?:z[aá]kazn[ií]k|z[aá]kaznic\p{L}*|majite[lľ]\p{L}*|meno|jm[eé]no|customer|owner|kunde|klient)[:\s]+((?:\p{Lu}[\p{L}'-]+\s?){2,3})/giu;

@@ -65,3 +65,15 @@ test('Intake of a known car prefills vehicle and customer', () => {
   const done = svc.completeIntake(tid, r.ref);
   assert.equal(done.vehicleId, svc.findVehicles(tid, 'ZA 123AB')[0].id, 'no duplicate vehicle');
 });
+
+test('intake parser: make/model/year, section boundaries, "kontrolky žiadne", Škoda vs škoda', () => {
+  const a = parseIntakeText('osobné auto ZA 999ZZ, Škoda Octavia 2019 diesel, 54 tisíc km, nádrž pol, kontrolky žiadne, zákazník Eva Malá 0905 123 456, závada: hučí predné koleso, poškodenie: odreté ľavé zrkadlo, dva kľúče', { country: 'SK' }).fields;
+  assert.equal(a.make, 'Škoda'); assert.equal(a.model, 'Octavia'); assert.equal(a.year, 2019);
+  assert.equal(a.complaint, 'hučí predné koleso'); assert.equal(a.damage, 'odreté ľavé zrkadlo');
+  assert.equal(a.warningLights, 'none'); assert.equal(a.keys, 2); assert.equal(a.customerName, 'Eva Malá');
+  const b = parseIntakeText('dodávka VW Transporter T6 BA 456CD 3,2 t, 210 000 km, problém: klepe podvozok vpravo, škoda na laku zadné dvere, kontrolky: ABS svieti, majiteľ Peter Horváth +421 911 222 333', { country: 'SK' }).fields;
+  assert.equal(b.make, 'Volkswagen'); assert.equal(b.model, 'Transporter T6'); assert.equal(b.category, 'N1'); assert.equal(b.maxWeightKg, 3200);
+  assert.equal(b.warningLights, 'ABS svieti'); assert.match(b.complaint, /^klepe podvozok vpravo/);
+  const c = parseIntakeText('škoda na laku, 120000 km', { country: 'SK' }).fields;
+  assert.equal(c.make, undefined); assert.equal(c.year, undefined);
+});

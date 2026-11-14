@@ -64,8 +64,8 @@ test('MCP: tools listed with explicit annotations and UI template', async () => 
   assert.ok(result.tools.length >= 20);
   for (const t of result.tools) for (const k of ['readOnlyHint', 'destructiveHint', 'openWorldHint']) assert.equal(typeof t.annotations[k], 'boolean', `${t.name}.${k}`);
   const slots = result.tools.find((t) => t.name === 'find_free_slots');
-  assert.equal(slots._meta.ui.resourceUri, 'ui://caree/widget-v1.html');
-  const res = await mcp('resources/read', { uri: 'ui://caree/widget-v1.html' });
+  assert.equal(slots._meta.ui.resourceUri, 'ui://caree/widget-v2.html');
+  const res = await mcp('resources/read', { uri: 'ui://caree/widget-v2.html' });
   assert.equal(res.result.contents[0].mimeType, 'text/html;profile=mcp-app');
 });
 

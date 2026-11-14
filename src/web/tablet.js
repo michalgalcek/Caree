@@ -105,5 +105,5 @@ $('go').onclick=async()=>{ $('lerr').textContent=''; const r=await fetch('/api/a
 $('out').onclick=()=>{S.t=null;show()};
 if(!SR){ $('dictAll').hidden=true; $('dictHint').textContent='Voice input needs Chrome, Edge or Safari – you can type everything.'; }
 addEventListener('online',sync); addEventListener('offline',status); setInterval(sync,30000); show();
-</script>`, { head: '<meta name="theme-color" content="#0b6bcb">' });
+</script>`, { head: '<meta name="theme-color" content="#0b6bcb">', noTranslate: true });
 }
