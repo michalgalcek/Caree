@@ -136,3 +136,9 @@ test('Maintenance: no service record never yields dates in the past', () => {
   const fluid = r.items.find((i) => i.code === 'BRAKEFLUID');
   assert.equal(fluid.due, null);
 });
+
+test('Scheduler: never offers a slot overlapping the same vehicle\'s other job', () => {
+  const ws = new Workshop({ mechanics: [mech('A'), mech('B')], bays: [{ id: 'L1', name: 'Lift 1' }, { id: 'L2', name: 'Lift 2' }] });
+  const slots = ws.findSlots({ tasks: [{ code: 'OIL', hours: 0.75 }] }, { earliest: '2026-11-16T08:00', onePerDay: false, count: 2, avoid: [{ start: '2026-11-16T08:00', end: '2026-11-16T09:45' }] });
+  for (const s of slots) assert.ok(s.start >= '2026-11-16T09:45', s.start);
+});

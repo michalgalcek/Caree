@@ -98,7 +98,8 @@ export class Workshop {
   }
 
   /** Earliest start options for a job. earliest: 'YYYY-MM-DDTHH:mm'; partsEta delays start. */
-  findSlots(job, { earliest, partsEta = null, count = 3, horizonDays = 21, onePerDay = true } = {}) {
+  findSlots(job, { earliest, partsEta = null, count = 3, horizonDays = 21, onePerDay = true, avoid = [] } = {}) {
+    const avoidUnits = avoid.map((a) => [toUnit(a.start), toUnit(a.end)]); // e.g. the same vehicle's other jobs
     let start = toUnit(earliest);
     if (partsEta) start = Math.max(start, Math.ceil(Date.parse(partsEta + 'Z') / 60000 / UNIT_MIN));
     const end = start + horizonDays * 96;
@@ -110,6 +111,7 @@ export class Workshop {
       const day = fromUnit(u).slice(0, 10);
       if (onePerDay && usedDays.has(day)) continue;
       const p = this.tryPlace(job, u);
+      if (p && avoidUnits.some(([a, b]) => p._units[0] < b && p._units[1] > a)) continue;
       if (p) { out.push(strip(p)); usedDays.add(day); }
     }
     return out;

@@ -199,6 +199,11 @@ export class Caree {
       .map((j) => ({ bayId: j.bay_id, start: j.start, end: j.end, assignments: J.parse(j.assignments, []) }));
     return new Workshop({ mechanics: this.mechanics(tid), bays: this.bays(tid), opening: t.settings.opening || undefined, bookings, closedDates: t.settings.closedDates || [] });
   }
+  vehicleBusy(tid, vehicleId, excludeJobId = null) {
+    if (!vehicleId) return [];
+    return this.q(`SELECT id, start, end FROM jobs WHERE tenant_id=? AND vehicle_id=? AND status IN ('booked','in_progress') AND start IS NOT NULL`).all(tid, vehicleId)
+      .filter((j) => j.id !== excludeJobId).map((j) => ({ start: j.start, end: j.end }));
+  }
   jobSpec(tid, codes, make) {
     return {
       tasks: codes.map((code) => {
@@ -216,7 +221,7 @@ export class Caree {
     const v = vehicleId ? this.vehicle(tid, vehicleId) : null;
     const ws = this.workshop(tid);
     if (!this.bays(tid).length || !this.mechanics(tid).length) throw new Invalid('Add at least one lift/bay and one mechanic first (setup_workshop).');
-    return { timezone: s.timezone, slots: ws.findSlots(this.jobSpec(tid, codes, v?.make), { earliest: start, partsEta, count }) };
+    return { timezone: s.timezone, slots: ws.findSlots(this.jobSpec(tid, codes, v?.make), { earliest: start, partsEta, count, avoid: this.vehicleBusy(tid, vehicleId) }) };
   }
   book(tid, { vehicleId, codes, start = null, complaint = null, customerWaiting = false, promisedBy = null, source = 'staff', actor }) {
     const v = this.vehicle(tid, vehicleId);
@@ -226,11 +231,11 @@ export class Caree {
     const earliest = start || roundUp(localNow(s.timezone));
     let placement;
     if (start) {
-      const [p] = ws.findSlots(spec, { earliest: start, count: 1, onePerDay: false, horizonDays: 1 });
+      const [p] = ws.findSlots(spec, { earliest: start, count: 1, onePerDay: false, horizonDays: 1, avoid: this.vehicleBusy(tid, v.id) });
       if (!p || p.start !== start) throw new Invalid(`${start} is no longer free – call find_free_slots again.`);
       placement = p;
     } else {
-      [placement] = ws.findSlots(spec, { earliest, count: 1, onePerDay: false });
+      [placement] = ws.findSlots(spec, { earliest, count: 1, onePerDay: false, avoid: this.vehicleBusy(tid, v.id) });
       if (!placement) throw new Invalid('No capacity in the next 3 weeks.');
     }
     const est = this.estimateFor(tid, { vehicleId, codes });
@@ -275,7 +280,7 @@ export class Caree {
     const codes = this.q('SELECT code FROM job_tasks WHERE tenant_id=? AND job_id=?').all(tid, j.id).map((r) => r.code);
     const v = this.vehicle(tid, j.vehicle_id);
     const ws = this.workshop(tid, { excludeJobId: j.id });
-    const [p] = ws.findSlots(this.jobSpec(tid, codes, v.make), { earliest, count: 1, onePerDay: false, partsEta: j.parts_eta });
+    const [p] = ws.findSlots(this.jobSpec(tid, codes, v.make), { earliest, count: 1, onePerDay: false, partsEta: j.parts_eta, avoid: this.vehicleBusy(tid, v.id, j.id) });
     if (!p) throw new Invalid('no free slot found');
     this.q('UPDATE jobs SET start=?, end=?, bay_id=?, assignments=?, updated_at=? WHERE id=?').run(p.start, p.end, p.bayId, J.str(p.assignments), nowIso(), j.id);
     this.audit(tid, actor, 'job.reschedule', 'job', j.id);
