@@ -1,0 +1,80 @@
+// Single UI resource for ChatGPT (MCP Apps). Renders tool results: slots, estimate, plan, vehicle card, job status.
+// Reads data through the standard ui/notifications/tool-result bridge, with window.openai as ChatGPT fallback.
+// All data is treated as untrusted: rendered with textContent only.
+export const WIDGET_URI = 'ui://caree/widget-v1.html';
+
+export const WIDGET_HTML = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+:root{color-scheme:light dark;--line:rgba(127,127,127,.3);--muted:rgba(127,127,127,1);--acc:#0b6bcb}
+body{margin:0;font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:transparent}
+.wrap{padding:12px}.h{font-weight:700;font-size:15px;margin:0 0 8px}.muted{color:var(--muted);font-size:12px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.card{border:1px solid var(--line);border-radius:10px;padding:10px}.big{font-size:16px;font-weight:700}
+button{margin-top:8px;background:var(--acc);color:#fff;border:0;border-radius:8px;padding:7px 12px;font:inherit;font-weight:600;cursor:pointer}
+button[disabled]{opacity:.5;cursor:default}
+table{width:100%;border-collapse:collapse}td,th{padding:5px 4px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}td.r,th.r{text-align:right}
+.bar{height:8px;border-radius:4px;background:var(--line);overflow:hidden}.bar>i{display:block;height:100%;background:var(--acc)}
+.red{color:#c62828}.amber{color:#b26a00}.green{color:#2e7d32}
+</style></head><body><div class="wrap" id="root"><div class="muted">Caree…</div></div>
+<script>
+(function(){
+  var root=document.getElementById('root'); var reqId=1; var pending={};
+  function el(tag,cls,text){var e=document.createElement(tag); if(cls)e.className=cls; if(text!=null)e.textContent=String(text); return e;}
+  function fmt(n,cur,loc){ if(n==null) return '–'; try{return new Intl.NumberFormat(loc||undefined,{style:'currency',currency:cur||'EUR'}).format(n);}catch(e){return n+' '+(cur||'');} }
+  function dt(s,loc){ if(!s) return '–'; try{var d=new Date(s+':00Z'); return d.toLocaleString(loc||undefined,{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit',timeZone:'UTC'});}catch(e){return s.replace('T',' ');} }
+  function rpc(method,params){ return new Promise(function(res,rej){ var id=reqId++; pending[id]={res:res,rej:rej}; window.parent.postMessage({jsonrpc:'2.0',id:id,method:method,params:params},'*'); setTimeout(function(){ if(pending[id]){delete pending[id]; rej(new Error('timeout'));} },20000); }); }
+  function callTool(name,args){
+    if(window.openai && window.openai.callTool) return window.openai.callTool(name,args);
+    return rpc('tools/call',{name:name,arguments:args});
+  }
+  window.addEventListener('message',function(ev){
+    if(ev.source!==window.parent) return; var m=ev.data||{};
+    if(m.id && pending[m.id]){ var p=pending[m.id]; delete pending[m.id]; m.error?p.rej(m.error):p.res(m.result); return; }
+    if(m.method==='ui/notifications/tool-result' && m.params) render(m.params.structuredContent||m.params);
+  });
+  try{ rpc('ui/initialize',{appInfo:{name:'Caree',version:'1'},appCapabilities:{},protocolVersion:'2026-01-26'}).then(function(){ window.parent.postMessage({jsonrpc:'2.0',method:'ui/notifications/initialized',params:{}},'*'); }).catch(function(){}); }catch(e){}
+  function fromOpenAI(){ if(window.openai && window.openai.toolOutput) render(window.openai.toolOutput); }
+  window.addEventListener('openai:set_globals',fromOpenAI); fromOpenAI();
+
+  function render(d){
+    if(!d || !d.view) return; root.innerHTML=''; var L=d.labels||{}; var loc=d.locale;
+    if(d.title) root.appendChild(el('div','h',d.title));
+    if(d.view==='slots'){
+      var g=el('div','grid'); (d.slots||[]).forEach(function(s){
+        var c=el('div','card'); c.appendChild(el('div','big',dt(s.start,loc)));
+        c.appendChild(el('div','muted',(s.bayName||'')+' · '+(s.assignments||[]).map(function(a){return (a.mechanicNames||[]).join(' + ');}).join(', ')));
+        if(d.vehicleId){ var b=el('button',null,L.book||'Book'); b.onclick=function(){ b.disabled=true; b.textContent='…'; callTool('book_appointment',{vehicleId:d.vehicleId,operations:d.operations,start:s.start}).then(function(){b.textContent='✓';}).catch(function(){b.disabled=false;b.textContent=L.book||'Book';}); }; c.appendChild(b); }
+        g.appendChild(c); }); root.appendChild(g);
+      if(!(d.slots||[]).length) root.appendChild(el('div','muted','No free slot in the next 3 weeks.'));
+    }
+    if(d.view==='estimate'){
+      var t=el('table'); var h=el('tr'); ['', 'h', ''].forEach(function(x,i){ var th=el('th',i?'r':null,x); h.appendChild(th); }); t.appendChild(h);
+      (d.lines||[]).forEach(function(l){ var r=el('tr'); r.appendChild(el('td',null,l.name)); r.appendChild(el('td','r',l.hours)); r.appendChild(el('td','muted',l.samples?('shop avg '+l.shopMedianHours+' h, '+l.samples+'×'):'')); t.appendChild(r); });
+      (d.parts||[]).forEach(function(p){ var r=el('tr'); r.appendChild(el('td',null,(p.qty>1?p.qty+'× ':'')+p.name)); r.appendChild(el('td','r',fmt(p.unitPrice,d.currency,loc))); r.appendChild(el('td','muted',p.priceSource)); t.appendChild(r); });
+      root.appendChild(t); var T=d.totals||{};
+      var s=el('div','card'); s.appendChild(el('div',null,(L.labor||'Labour')+': '+fmt(T.labour,d.currency,loc)+' · '+(L.parts||'Parts')+': '+fmt(T.parts,d.currency,loc)));
+      s.appendChild(el('div','big',(L.total||'Total incl. tax')+': '+fmt(T.gross,d.currency,loc))); root.appendChild(s);
+      (d.notes||[]).forEach(function(n){ root.appendChild(el('div','muted','• '+n)); });
+    }
+    if(d.view==='plan'){
+      var u=d.utilisation||{}; (u.bays||[]).concat(u.mechanics||[]).forEach(function(x){ var row=el('div'); row.appendChild(el('div',null,x.name+' – '+x.busyPct+' %')); var bar=el('div','bar'); var i=el('i'); i.style.width=Math.min(100,x.busyPct)+'%'; bar.appendChild(i); row.appendChild(bar); root.appendChild(row); });
+      var t2=el('table'); (d.jobs||[]).forEach(function(j){ var r=el('tr'); r.appendChild(el('td',null,dt(j.start,loc))); r.appendChild(el('td',null,j.ref+' '+(j.title||''))); r.appendChild(el('td','muted',(j.bay||'')+' · '+(j.mechanics||[]).join(', '))); t2.appendChild(r); }); root.appendChild(t2);
+    }
+    if(d.view==='vehicle'){
+      var v=d.vehicle||{}; root.appendChild(el('div','big',[v.plate,v.make,v.model,v.year].filter(Boolean).join(' · ')));
+      if(v.vin) root.appendChild(el('div','muted','VIN '+v.vin));
+      var ni=d.nextInspection||{}; if(ni.due) root.appendChild(el('div',ni.daysLeft<30?'red':(ni.daysLeft<90?'amber':null),(ni.name||'')+': '+ni.due+(ni.assumedFromRegistration?' (calculated from registration – check documents)':'')));
+      var t3=el('table'); ((d.maintenance||{}).items||[]).slice(0,6).forEach(function(m){ var r=el('tr'); r.appendChild(el('td',null,m.name)); r.appendChild(el('td',m.daysLeft<30?'red':null,m.due)); t3.appendChild(r); }); root.appendChild(t3);
+      (d.declinedWorkToRemind||[]).forEach(function(x){ root.appendChild(el('div','amber','↻ '+x.item+(x.note?' – '+x.note:''))); });
+    }
+    if(d.view==='status'){
+      root.appendChild(el('div','big',d.summary||d.status));
+      (d.inspection||[]).forEach(function(i){ root.appendChild(el('div',i.status,(i.status==='red'?'● ':i.status==='amber'?'◐ ':'○ ')+i.item+(i.note?' – '+i.note:'')+' ['+i.decision+']')); });
+    }
+    if(d.view==='list'){
+      var t4=el('table'); (d.rows||[]).forEach(function(r){ var tr=el('tr'); (r||[]).forEach(function(c){ tr.appendChild(el('td',null,c)); }); t4.appendChild(tr); }); root.appendChild(t4);
+    }
+    if(d.footnote) root.appendChild(el('div','muted',d.footnote));
+  }
+})();
+</script></body></html>`;

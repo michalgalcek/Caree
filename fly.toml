@@ -1,0 +1,25 @@
+# Fly.io – EU region (Frankfurt) to keep shop data in the EU.
+app = "caree"
+primary_region = "fra"
+
+[build]
+
+[env]
+  PUBLIC_URL = "https://caree.housee.sk"
+  NODE_ENV = "production"
+
+[[mounts]]
+  source = "caree_data"
+  destination = "/data"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = "off"
+  min_machines_running = 1
+
+  [[http_service.checks]]
+    interval = "30s"
+    timeout = "5s"
+    method = "GET"
+    path = "/health"

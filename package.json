@@ -1,0 +1,25 @@
+{
+  "name": "caree",
+  "version": "0.1.0",
+  "description": "Caree – AI workshop assistant for car repair shops (ChatGPT app). Operated by housee s.r.o.",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node --no-warnings src/server.js",
+    "test": "node --no-warnings --test test/*.test.js",
+    "seed": "node --no-warnings src/seed.js",
+    "annotations": "node --no-warnings scripts/annotations.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "UNLICENSED",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.2",
+    "express": "^5.3.0",
+    "zod": "^4.6.7"
+  },
+  "type": "module",
+  "engines": {
+    "node": ">=22.5"
+  },
+  "private": true
+}
