@@ -119,9 +119,20 @@ export function maintenanceDue(vehicle, lastDone = {}, history = [], now = new D
   for (const it of items) {
     if (it.skipFuel && it.skipFuel.includes(fuel)) continue;
     if (it.onlyFuel && !it.onlyFuel.includes(fuel)) continue;
-    const last = lastDone[it.code] || { date: vehicle.firstRegistration, km: 0 };
-    if (!last.date) continue;
-    const byTime = it.months ? addYears(new Date(last.date), it.months / 12) : null;
+    const record = lastDone[it.code];
+    let last, assumed = false;
+    if (record?.date) last = record;
+    else if (vehicle.firstRegistration && currentKm != null && currentKm < (it.km ?? Infinity) && (now - new Date(vehicle.firstRegistration)) / DAY < (it.months || 0) * 30.4) {
+      last = { date: vehicle.firstRegistration, km: 0 }; // young car still in its first interval
+    } else if (it.km != null && currentKm != null) {
+      // no service record: assume work was done at the last multiple of the interval – flagged so nobody treats it as fact
+      last = { date: null, km: Math.floor(currentKm / it.km) * it.km };
+      assumed = true;
+    } else {
+      out.push({ code: it.code, name: it.name, due: null, daysLeft: null, trigger: null, assumed: true, note: 'no service record – check the service book', source: 'generic interval – replace with manufacturer data' });
+      continue;
+    }
+    const byTime = it.months && last.date ? addYears(new Date(last.date), it.months / 12) : null;
     let byKm = null;
     if (it.km != null && currentKm != null) {
       const remaining = last.km + it.km - currentKm;
@@ -129,9 +140,9 @@ export function maintenanceDue(vehicle, lastDone = {}, history = [], now = new D
     }
     const due = [byTime, byKm].filter(Boolean).sort((a, b) => a - b)[0];
     if (!due) continue;
-    out.push({ code: it.code, name: it.name, due: iso(due), daysLeft: Math.ceil((due - now) / DAY), trigger: due === byKm ? 'km' : 'time', source: 'generic interval – replace with manufacturer data' });
+    out.push({ code: it.code, name: it.name, due: iso(due), daysLeft: Math.ceil((due - now) / DAY), trigger: due === byKm ? 'km' : 'time', assumed, ...(assumed ? { note: 'no service record – estimated from mileage, check the service book' } : {}), source: 'generic interval – replace with manufacturer data' });
   }
-  return { estimatedKm: currentKm == null ? null : Math.round(currentKm), kmPerDay: Math.round(perDay), items: out.sort((a, b) => a.daysLeft - b.daysLeft) };
+  return { estimatedKm: currentKm == null ? null : Math.round(currentKm), kmPerDay: Math.round(perDay), items: out.sort((a, b) => (a.daysLeft ?? 1e9) - (b.daysLeft ?? 1e9)) };
 }
 
 function estimateCurrentKm(vehicle, history, now, perDay) {

@@ -64,8 +64,7 @@ table{width:100%;border-collapse:collapse}td,th{padding:5px 4px;border-bottom:1p
       var v=d.vehicle||{}; root.appendChild(el('div','big',[v.plate,v.make,v.model,v.year].filter(Boolean).join(' · ')));
       if(v.vin) root.appendChild(el('div','muted','VIN '+v.vin));
       var ni=d.nextInspection||{}; if(ni.due) root.appendChild(el('div',ni.daysLeft<30?'red':(ni.daysLeft<90?'amber':null),(ni.name||'')+': '+ni.due+(ni.assumedFromRegistration?' (calculated from registration – check documents)':'')));
-      var t3=el('table'); ((d.maintenance||{}).items||[]).slice(0,6).forEach(function(m){ var r=el('tr'); r.appendChild(el('td',null,m.name)); r.appendChild(el('td',m.daysLeft<30?'red':null,m.due)); t3.appendChild(r); }); root.appendChild(t3);
-      (d.declinedWorkToRemind||[]).forEach(function(x){ root.appendChild(el('div','amber','↻ '+x.item+(x.note?' – '+x.note:''))); });
+      var t3=el('table'); ((d.maintenance||{}).items||[]).slice(0,6).forEach(function(m){ var r=el('tr'); r.appendChild(el('td',null,m.name)); r.appendChild(el('td',(m.daysLeft!=null&&m.daysLeft<30)?'red':null,m.due?(m.due+(m.assumed?' *':'')):'?')); t3.appendChild(r); }); root.appendChild(t3); if(((d.maintenance||{}).items||[]).some(function(m){return m.assumed;})) root.appendChild(el('div','muted','* / ? no service record – estimated, check the service book')); (d.declinedWorkToRemind||[]).forEach(function(x){ root.appendChild(el('div','amber','↻ '+x.item+(x.note?' – '+x.note:''))); });
     }
     if(d.view==='status'){
       root.appendChild(el('div','big',d.summary||d.status));

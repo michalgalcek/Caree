@@ -126,3 +126,13 @@ test('Suppliers: failing API does not break comparison; order falls back to e-ma
   assert.equal(o.status, 'fallback_email');
   assert.equal(o.to, 'orders@example.com');
 });
+
+test('Maintenance: no service record never yields dates in the past', () => {
+  const now = new Date('2026-11-14');
+  const r = maintenanceDue({ fuel: 'DIESEL', firstRegistration: '2020-04-15', mileage: 142000, mileageDate: '2026-11-14' }, {}, [], now);
+  for (const i of r.items) if (i.due) assert.ok(i.due >= '2026-11-14', `${i.code} ${i.due}`);
+  const oil = r.items.find((i) => i.code === 'OIL');
+  assert.equal(oil.assumed, true);
+  const fluid = r.items.find((i) => i.code === 'BRAKEFLUID');
+  assert.equal(fluid.due, null);
+});
