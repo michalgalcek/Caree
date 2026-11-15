@@ -20,7 +20,7 @@ Generated from the code (`npm run annotations`). Every tool sets all three hints
 | `record_inspection` | Record inspection findings | false | false | false | Adds findings to a job; nothing is sent to the customer. |
 | `create_approval_link` | Create approval link | false | false | false | Creates a private link; nothing is sent automatically. |
 | `compare_parts` | Compare parts prices | true | false | true | Read-only price requests to external supplier systems chosen by the shop (therefore openWorld). |
-| `order_parts` | Order parts | false | true | true | Sends an order to an external supplier – an irreversible commercial action. |
+| `order_parts` | Order parts | false | true | true | Places a commercial order with an external supplier (directly by API or as a prepared e-mail) – treated as irreversible. |
 | `plan_workshop` | Workshop plan | true | false | false | Reads the schedule. |
 | `booking_requests` | New booking requests | true | false | false | Reads data of the signed-in shop. |
 | `get_shop_settings` | Shop settings | true | false | false | Reads configuration. |

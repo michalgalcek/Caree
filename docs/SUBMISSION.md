@@ -4,7 +4,7 @@ Since 2026 ChatGPT apps are submitted and published **as plugins** in the plugin
 Sources: developers.openai.com/plugins/deploy/submission, developers.openai.com/apps-sdk/app-guidelines (checked 15 Nov 2026).
 
 ## 0. Package
-- `plugin/garagee/plugin.json` – listing (name, descriptions, URLs, logo, starter prompts), 5 positive + 3 negative test cases, countries, translations (sk, cs, de, pl, hu).
+- `plugin/garagee/plugin.json` – listing (name, descriptions, URLs, logo, starter prompts), 5 positive + 3 negative test cases, countries, translations (sk, cs, de, pl, hu, fr, it, es, nl).
 - `plugin/garagee/mcp.json` – one remote server `https://garagee.housee.sk/mcp` (streamable HTTP; OAuth discovered from the server, dynamic client registration, no client secret, no headers).
 - `plugin/garagee/assets/logo.png`, `logo-dark.png` – 512×512.
 - Build the ZIP: `cd plugin && zip -r ../garagee-plugin.zip garagee -x 'garagee/screenshots/*' 'garagee/assets/*.svg'`
@@ -49,6 +49,8 @@ Sources: developers.openai.com/plugins/deploy/submission, developers.openai.com/
 | Plans without in-app commerce | Start plan = 1,000 active vehicles; Profi/Workshop+ arranged on the website only (`/plans`, no prices or links inside ChatGPT). At the limit tools return a neutral message (archive/erase or ask the shop owner) – no upgrade prompt. Same limits in ChatGPT, tablet and web. Reviewer and demo shops are on the internal `unlimited` plan. |
 | No telemetry in tool output | No session/trace IDs or internal timestamps in tool results; only business data (e.g. job dates, export date in a GDPR export) |
 | Transparent auth | Sign-in page states what is accessed; scope `workshop` only |
+| Honest descriptions | Tools describe exactly what happens: Garagee does not send e-mails or SMS itself (order e-mails and approval links are prepared for the user to send); unexpected errors return a plain message without internal details. |
+| Localisation | ChatGPT cards, tablet, intake labels and dictation, operation/part names and website in en, sk, cs, de, pl, hu, fr, it, es, nl; legal documents in English (binding). |
 | Untrusted data in UI | Widget renders with `textContent` only; no remote scripts; empty CSP domain lists |
 
 ## F. Test cases

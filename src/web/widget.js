@@ -1,7 +1,7 @@
 // Single UI resource for ChatGPT (MCP Apps). Renders tool results: slots, estimate, plan, vehicle card, job status.
 // Reads data through the standard ui/notifications/tool-result bridge, with window.openai as ChatGPT fallback.
 // All data is treated as untrusted: rendered with textContent only.
-export const WIDGET_URI = 'ui://garagee/widget-v3.html';
+export const WIDGET_URI = 'ui://garagee/widget-v4.html';
 
 export const WIDGET_HTML = `<!doctype html><html translate="no"><head><meta name="google" content="notranslate"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <style>
@@ -59,7 +59,7 @@ table{width:100%;border-collapse:collapse}td,th{padding:5px 4px;border-bottom:1p
       var parts=[(L.labor||'Labour')+' '+fmt(T.labour,d.currency,loc),(L.parts||'Parts')+' '+fmt(T.parts,d.currency,loc)]; if(T.supplies) parts.push((U.supplies||'Shop supplies')+' '+fmt(T.supplies,d.currency,loc)); if(T.tax!=null) parts.push((U.vat||'VAT')+' '+(d.vatRate!=null?d.vatRate+' % ':'')+fmt(T.tax,d.currency,loc));
       s.appendChild(el('div','muted',parts.join(' · ')));
       s.appendChild(el('div','big',(L.total||'Total incl. tax')+': '+fmt(T.gross,d.currency,loc))); root.appendChild(s);
-      (d.overlaps||[]).forEach(function(o){ root.appendChild(el('div','green','• '+(U.overlap||'Shared access ({ops}): −{h} h').replace('{ops}',o.codes.map(function(c){return N[c]||c;}).join(' + ')).replace('{h}',o.hours))); });
+      (d.overlaps||[]).forEach(function(o){ root.appendChild(el('div','green','• '+(U.overlap||'Shared access ({ops}): −{h} h').replace('{ops}',o.codes.map(function(c){ var ln=(d.lines||[]).filter(function(l){return l.code===c;})[0]; return N[c]||(ln&&ln.name)||c; }).join(' + ')).replace('{h}',o.hours))); });
       if((d.parts||[]).some(function(p){return /reference/.test(p.priceSource||'');})) root.appendChild(el('div','muted','• '+(U.refPrices||'Part prices are reference prices – confirm with the supplier.')));
       if(L.estimateNote) root.appendChild(el('div','muted','• '+L.estimateNote));
     }

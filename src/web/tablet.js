@@ -1,9 +1,10 @@
 // Mechanic tablet: today's tasks, vehicle intake by typing or voice, works offline (queue + idempotent sync).
 // Voice uses the browser's speech recognition (Chrome/Edge/Safari), in the shop's language.
 import { page } from './html.js';
+import { TABLET } from '../config/i18n.js';
 
 export const SERVICE_WORKER = `
-const C='garagee-app-v3';
+const C='garagee-app-v4';
 self.addEventListener('install',e=>e.waitUntil(caches.open(C).then(c=>c.addAll(['/app']))));
 self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==C).map(k=>caches.delete(k))))));
 self.addEventListener('fetch',e=>{ const u=new URL(e.request.url); if(e.request.method==='GET' && u.pathname==='/app'){ e.respondWith(fetch(e.request).then(r=>{caches.open(C).then(c=>c.put(e.request,r.clone()));return r;}).catch(()=>caches.match(e.request))); }});`;
@@ -17,10 +18,10 @@ export function tabletPage() {
 .big{width:100%;padding:16px;font-size:1.1rem;margin:8px 0}.ok{color:var(--green);font-weight:600}
 h3{margin:18px 0 4px;font-size:1rem;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
 </style>
-<h1>Garagee – workshop</h1>
+<h1 id="ttl" translate="no">Garagee</h1>
 <div id="login" class="card" hidden>
-  <label>E-mail<input id="em" type="email" autocomplete="username"></label>
-  <label>Password<input id="pw" type="password" autocomplete="current-password"></label>
+  <label><span id="lEm">E-mail</span><input id="em" type="email" autocomplete="username"></label>
+  <label><span id="lPw">Password</span><input id="pw" type="password" autocomplete="current-password"></label>
   <button id="go">Sign in</button> <span id="lerr" class="err"></span>
 </div>
 <div id="app" hidden>
@@ -38,37 +39,41 @@ h3{margin:18px 0 4px;font-size:1rem;color:var(--muted);text-transform:uppercase;
 </div>
 <script>
 const $=id=>document.getElementById(id);
+const TT=${JSON.stringify(TABLET)};
 const S={get t(){return localStorage.getItem('garagee_t')}, set t(v){v?localStorage.setItem('garagee_t',v):localStorage.removeItem('garagee_t')},
   get q(){try{return JSON.parse(localStorage.getItem('garagee_q')||'[]')}catch{return []}}, set q(v){localStorage.setItem('garagee_q',JSON.stringify(v))},
   get cache(){try{return JSON.parse(localStorage.getItem('garagee_today')||'null')}catch{return null}}, set cache(v){localStorage.setItem('garagee_today',JSON.stringify(v))},
   get draft(){try{return JSON.parse(localStorage.getItem('garagee_intake')||'{}')}catch{return {}}}, set draft(v){localStorage.setItem('garagee_intake',JSON.stringify(v))}};
+function lang(){ const l=((S.cache&&S.cache.language)||navigator.language||'en').slice(0,2).toLowerCase(); return TT[l]?l:'en'; }
+function T(k,n){ const v=(TT[lang()][k]!=null?TT[lang()][k]:TT.en[k]); return n==null?v:v.replace('{n}',n); }
+function applyTexts(){ document.documentElement.lang=lang(); $('ttl').textContent=T('title'); $('lEm').textContent=T('email'); $('lPw').textContent=T('password'); $('go').textContent=T('signIn'); $('out').textContent=T('signOut'); $('tToday').textContent=T('today'); $('tIntake').textContent=T('intakeTab'); $('dictAll').textContent=T('dictAll'); $('dictHint').textContent=SR?T('dictHint'):T('voiceNeed'); $('isave').textContent=T('saveIntake'); }
 if('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(()=>{});
 async function api(p,o={}){const r=await fetch(p,{...o,headers:{'content-type':'application/json',authorization:'Bearer '+S.t}});if(r.status===401){S.t=null;show();throw new Error('auth')}if(!r.ok)throw new Error(r.status);return r.json()}
-function status(){ $('net').textContent=navigator.onLine?'online':'OFFLINE – changes are saved on this tablet'; $('q').textContent=S.q.length?S.q.length+' change(s) waiting to sync':'all synced'; }
+function status(){ $('net').textContent=navigator.onLine?T('online'):T('offline'); $('q').textContent=S.q.length?T('waiting',S.q.length):T('synced'); }
 async function sync(){ if(!navigator.onLine||!S.q.length) return status(); try{ const res=await api('/api/app/sync',{method:'POST',body:JSON.stringify({ops:S.q})}); const done=new Set(res.results.filter(r=>r.status!=='error').map(r=>r.clientOpId)); const errs=res.results.filter(r=>r.status==='error'); S.q=S.q.filter(o=>!done.has(o.clientOpId)&&!errs.some(e=>e.clientOpId===o.clientOpId)); if(errs.length) alertBox(errs.map(e=>e.error).join(' | ')); else if(done.size) load(); }catch(e){} status(); }
 function alertBox(msg){ $('istatus').innerHTML=''; const p=document.createElement('span'); p.className='err'; p.textContent=msg; $('istatus').appendChild(p); }
 
 // ---------- today
-function renderToday(d){ const L=$('today'); L.innerHTML=''; if(!d){L.textContent='No data yet.';return}
-  if(!(d.jobs||[]).length){ const p=document.createElement('p'); p.className='muted'; p.textContent='No jobs planned today.'; L.appendChild(p); }
+function renderToday(d){ const L=$('today'); L.innerHTML=''; if(!d){L.textContent=T('noData');return}
+  if(!(d.jobs||[]).length){ const p=document.createElement('p'); p.className='muted'; p.textContent=T('noJobs'); L.appendChild(p); }
   (d.jobs||[]).forEach(j=>{ const c=document.createElement('div'); c.className='card'; const h=document.createElement('b'); h.textContent=j.ref+' · '+(j.vehicle||'')+' · '+(j.start||'').replace('T',' '); c.appendChild(h);
     (j.tasks||[]).forEach(t=>{ const row=document.createElement('div'); row.className='row'; const s=document.createElement('span'); s.textContent=(t.done?'✓ ':'')+t.name+' ('+t.hours+' h)'; row.appendChild(s);
-      if(!t.done){ const inp=document.createElement('input'); inp.type='number'; inp.step='0.1'; inp.min='0.1'; inp.placeholder='actual h'; inp.style.width='110px'; const b=document.createElement('button'); b.textContent='Done';
-        b.onclick=()=>{ const h=parseFloat(inp.value); if(!(h>0)) return inp.focus(); S.q=[...S.q,{clientOpId:crypto.randomUUID(),type:'clock',taskId:t.id,actualHours:h,done:true}]; t.done=true; S.cache=d; renderToday(d); sync(); };
+      if(!t.done){ const inp=document.createElement('input'); inp.type='number'; inp.step='0.1'; inp.min='0.1'; inp.placeholder=T('actualH'); inp.style.width='110px'; const b=document.createElement('button'); b.textContent=T('done');
+        b.onclick=()=>{ const h=parseFloat(inp.value); if(!(h>0)) return inp.focus(); S.q=[...S.q,{clientOpId:crypto.randomUUID(),type:'clock',taskId:t.id,actualHours:h,done:true}]; t.done=true; S.cache=d; applyTexts(); renderToday(d); sync(); };
         row.appendChild(inp); row.appendChild(b);} c.appendChild(row); });
     L.appendChild(c); }); }
 
 // ---------- intake form (built from the server schema, labels in the shop language)
-const GROUPS={vehicle:'Vehicle',condition:'Condition at intake',customer:'Customer',job:'Work'};
+
 const LONG=['damage','complaint','notes','itemsInCar','warningLights','tyres'];
 function schema(){ return (S.cache&&S.cache.intake)||{labels:{},fields:[]}; }
 function buildForm(){ const f=$('iform'); f.innerHTML=''; const sc=schema(); const d=S.draft; let g='';
   sc.fields.forEach(x=>{ const grp=['plate','vin','make','model','year','category','maxWeightKg','fuel','firstRegistration','lastInspection'].includes(x.key)?'vehicle':['mileage','fuelLevel','warningLights','damage','tyres','itemsInCar','keys'].includes(x.key)?'condition':['customerName','customerPhone','customerEmail'].includes(x.key)?'customer':'job';
-    if(grp!==g){ g=grp; const h=document.createElement('h3'); h.textContent=GROUPS[g]; f.appendChild(h); }
+    if(grp!==g){ g=grp; const h=document.createElement('h3'); h.textContent=T('g_'+g); f.appendChild(h); }
     const wrap=document.createElement('div'); wrap.className='fld'; wrap.dataset.key=x.key;
     const lab=document.createElement('label'); const span=document.createElement('span'); span.textContent=sc.labels[x.key]||x.key; if(x.required) span.className='req'; lab.appendChild(span);
     let inp;
-    if(x.enum){ inp=document.createElement('select'); const o0=document.createElement('option'); o0.value=''; o0.textContent='–'; inp.appendChild(o0); x.enum.forEach(v=>{ const o=document.createElement('option'); o.value=v; o.textContent=v==='M1'?'M1 – passenger car':v==='N1'?'N1 – van ≤ 3.5 t':v; inp.appendChild(o); }); }
+    if(x.enum){ inp=document.createElement('select'); const o0=document.createElement('option'); o0.value=''; o0.textContent='–'; inp.appendChild(o0); x.enum.forEach(v=>{ const o=document.createElement('option'); o.value=v; o.textContent=v==='M1'?T('m1'):v==='N1'?T('n1'):v; inp.appendChild(o); }); }
     else if(x.key==='customerWaiting'){ inp=document.createElement('input'); inp.type='checkbox'; inp.style.width='auto'; }
     else if(LONG.includes(x.key)){ inp=document.createElement('textarea'); inp.rows=2; }
     else { inp=document.createElement('input'); inp.type=['mileage','year','keys','maxWeightKg'].includes(x.key)?'number':['firstRegistration','lastInspection','promisedBy'].includes(x.key)?'date':x.key==='customerPhone'?'tel':x.key==='customerEmail'?'email':'text'; if(x.key==='maxWeightKg'){inp.max=3500;} }
@@ -79,31 +84,31 @@ function buildForm(){ const f=$('iform'); f.innerHTML=''; const sc=schema(); con
     f.appendChild(wrap); });
   mark(); }
 function missing(){ const d=S.draft; const m=[]; schema().fields.forEach(x=>{ if(x.required===true && (d[x.key]==null||d[x.key]==='')) m.push(x.key); }); if(!d.plate&&!d.vin) m.push('plate'); if(d.maxWeightKg>3500) m.push('maxWeightKg'); return m; }
-function mark(){ const m=missing(); document.querySelectorAll('#iform .fld').forEach(w=>w.classList.toggle('miss',m.includes(w.dataset.key))); const L=schema().labels; $('istatus').innerHTML=''; const p=document.createElement('span'); p.className=m.length?'err':'ok'; p.textContent=m.length?('Missing: '+m.map(k=>L[k]||k).join(', ')):'✓ Ready to save'; if(S.draft.maxWeightKg>3500) p.textContent+=' – over 3.5 t: not accepted'; $('istatus').appendChild(p); }
+function mark(){ const m=missing(); document.querySelectorAll('#iform .fld').forEach(w=>w.classList.toggle('miss',m.includes(w.dataset.key))); const L=schema().labels; $('istatus').innerHTML=''; const p=document.createElement('span'); p.className=m.length?'err':'ok'; p.textContent=m.length?(T('missing')+m.map(k=>L[k]||k).join(', ')):T('ready'); if(S.draft.maxWeightKg>3500) p.textContent+=T('over35'); $('istatus').appendChild(p); }
 
 // ---------- voice
 const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
-function listen(btn,onText,continuous){ if(!SR){alertBox('Voice input is not supported in this browser – use Chrome, Edge or Safari, or type.');return;}
+function listen(btn,onText,continuous){ if(!SR){alertBox(T('voiceUnsupported'));return;}
   const r=new SR(); r.lang=(S.cache&&S.cache.locale)||'sk-SK'; r.interimResults=true; r.continuous=!!continuous; let final='';
-  btn.classList.add('rec'); const old=btn.textContent; if(continuous) btn.textContent='⏹ Stop';
+  btn.classList.add('rec'); const old=btn.textContent; if(continuous) btn.textContent=T('stop');
   r.onresult=e=>{ let interim=''; for(let i=e.resultIndex;i<e.results.length;i++){ const t=e.results[i][0].transcript; if(e.results[i].isFinal) final+=t+' '; else interim+=t; } $('heard').textContent=(final+interim).trim(); };
-  r.onerror=e=>{ alertBox('Microphone: '+e.error+(e.error==='not-allowed'?' – allow the microphone for this page':'')); };
+  r.onerror=e=>{ alertBox(T('mic')+e.error+(e.error==='not-allowed'?T('micAllow'):'')); };
   r.onend=()=>{ btn.classList.remove('rec'); btn.textContent=old; btn.onclick=btn._start; if(final.trim()) onText(final.trim()); };
   btn._start=btn.onclick; btn.onclick=()=>r.stop(); r.start(); }
 $('dictAll').onclick=function(){ listen(this, async txt=>{ const d=S.draft; d._transcript=((d._transcript||'')+' '+txt).trim(); S.draft=d;
-  if(!navigator.onLine){ alertBox('Offline – dictation saved as note; fill fields by typing.'); d.notes=((d.notes||'')+' '+txt).trim(); S.draft=d; buildForm(); return; }
-  try{ const r=await api('/api/app/intake/parse',{method:'POST',body:JSON.stringify({text:txt,current:S.draft})}); const dd=S.draft; Object.entries(r.fields).forEach(([k,v])=>{ if(v!=null&&v!=='') dd[k]=v; }); S.draft=dd; buildForm(); }catch(e){ alertBox('Could not process dictation: '+e.message); } }, true); };
+  if(!navigator.onLine){ alertBox(T('offlineDict')); d.notes=((d.notes||'')+' '+txt).trim(); S.draft=d; buildForm(); return; }
+  try{ const r=await api('/api/app/intake/parse',{method:'POST',body:JSON.stringify({text:txt,current:S.draft})}); const dd=S.draft; Object.entries(r.fields).forEach(([k,v])=>{ if(v!=null&&v!=='') dd[k]=v; }); S.draft=dd; buildForm(); }catch(e){ alertBox(T('dictErr')+e.message); } }, true); };
 $('isave').onclick=()=>{ const m=missing(); if(m.length){ mark(); return; } const d={...S.draft}; const text=d._transcript||''; delete d._transcript;
-  S.q=[...S.q,{clientOpId:crypto.randomUUID(),type:'intake',fields:d,text,complete:true}]; S.draft={}; buildForm(); $('istatus').innerHTML='<span class="ok">✓ Intake saved – job created in the planning queue</span>'; sync(); };
+  S.q=[...S.q,{clientOpId:crypto.randomUUID(),type:'intake',fields:d,text,complete:true}]; S.draft={}; buildForm(); $('istatus').innerHTML=''; const ok=document.createElement('span'); ok.className='ok'; ok.textContent=T('saved'); $('istatus').appendChild(ok); sync(); };
 
 // ---------- shell
 async function load(){ renderToday(S.cache); try{ const d=await api('/api/app/today'); S.cache=d; renderToday(d); if(!$('intake').hidden) buildForm(); }catch(e){} status(); }
 function tab(which){ $('today').hidden=which!=='today'; $('intake').hidden=which!=='intake'; $('tToday').classList.toggle('on',which==='today'); $('tIntake').classList.toggle('on',which==='intake'); if(which==='intake') buildForm(); }
 $('tToday').onclick=()=>tab('today'); $('tIntake').onclick=()=>tab('intake');
-function show(){ $('login').hidden=!!S.t; $('app').hidden=!S.t; if(S.t){load();sync();} }
-$('go').onclick=async()=>{ $('lerr').textContent=''; const r=await fetch('/api/app/login',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({email:$('em').value,password:$('pw').value})}); if(!r.ok){$('lerr').textContent=r.status===429?'Too many attempts – wait 10 minutes':'Sign-in failed';return} S.t=(await r.json()).access_token; show(); };
+function show(){ applyTexts(); $('login').hidden=!!S.t; $('app').hidden=!S.t; if(S.t){load();sync();} }
+$('go').onclick=async()=>{ $('lerr').textContent=''; const r=await fetch('/api/app/login',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({email:$('em').value,password:$('pw').value})}); if(!r.ok){$('lerr').textContent=r.status===429?T('tooMany'):T('signFail');return} S.t=(await r.json()).access_token; show(); };
 $('out').onclick=()=>{S.t=null;show()};
-if(!SR){ $('dictAll').hidden=true; $('dictHint').textContent='Voice input needs Chrome, Edge or Safari – you can type everything.'; }
+if(!SR){ $('dictAll').hidden=true; }
 addEventListener('online',sync); addEventListener('offline',status); setInterval(sync,30000); show();
 </script>`, { head: '<meta name="theme-color" content="#0b6bcb">', noTranslate: true });
 }

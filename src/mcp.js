@@ -46,7 +46,11 @@ export function buildMcpServer(svc, { baseUrl }) {
         const out = await handler(args, extra);
         return { content: [{ type: 'text', text: out.text }], structuredContent: out.data ?? undefined };
       } catch (e) {
-        return { isError: true, content: [{ type: 'text', text: e.message || 'Error' }] };
+        // Known errors (validation, not found, permissions) are explained to the user; anything unexpected is logged
+        // server-side and returned as a plain message without internal details.
+        const known = e && ['invalid', 'not_found', 'auth', 'forbidden'].includes(e.code);
+        if (!known) console.error(`[garagee] tool ${name} failed:`, e);
+        return { isError: true, content: [{ type: 'text', text: known ? e.message : 'Something went wrong in Garagee. Please try again; if it keeps happening, contact the shop owner or Garagee support.' }] };
       }
     });
   }
@@ -105,7 +109,7 @@ export function buildMcpServer(svc, { baseUrl }) {
   });
 
   tool('add_vehicle', {
-    title: 'Add vehicle and customer', description: 'Add a passenger car (M1) or van up to 3.5 t (N1), and optionally a new customer. Requires VIN or licence plate. For a car that has just arrived at the workshop prefer start_vehicle_intake. Ask for the date of first registration – needed for inspection reminders.',
+    title: 'Add vehicle and customer', description: 'Add a passenger car (M1) or van up to 3.5 t (N1), and optionally a new customer. Requires VIN or licence plate. For a car that has just arrived at the workshop prefer start_vehicle_intake. Ask for the date of first registration – needed to calculate when the periodic inspection is due.',
     input: {
       vin: z.string().max(25).optional(), plate: z.string().max(20).optional(), make: z.string().max(40).optional(), model: z.string().max(60).optional(),
       fuel: z.enum(['PETROL', 'DIESEL', 'LPG', 'CNG', 'HYBRID', 'EV']).optional(), firstRegistration: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
@@ -119,7 +123,7 @@ export function buildMcpServer(svc, { baseUrl }) {
     let customerId = p.customerId || null;
     if (!customerId && p.customerName) customerId = svc.addCustomer(a.tenantId, { name: p.customerName, phone: p.customerPhone, email: p.customerEmail }).id;
     const r = svc.addVehicle(a.tenantId, { ...p, customerId });
-    return { text: `Vehicle added (id ${r.vehicle.id}).${r.vinWarnings.length ? ' ' + r.vinWarnings.join(' ') : ''}`, data: r };
+    return { text: `Vehicle ${r.vehicle.plate || r.vehicle.vin} added.${r.vinWarnings.length ? ' ' + r.vinWarnings.join(' ') : ''}`, data: r };
   });
 
   tool('upcoming_services', {
@@ -203,7 +207,7 @@ export function buildMcpServer(svc, { baseUrl }) {
   });
 
   tool('create_approval_link', {
-    title: 'Create approval link', description: 'Create a link where the customer sees findings with photos and prices and approves or declines each item. Garagee does not send it – give the link to the user to share.',
+    title: 'Create approval link', description: 'Create a link where the customer sees the findings (with photos, if added) and prices and approves or declines each item. Garagee does not send it – give the link to the user to share.',
     input: { jobRef: z.string() }, annotations: WRITE, why: 'Creates a private link; nothing is sent automatically.',
   }, async ({ jobRef }, extra) => {
     const a = ctx(extra); need(a, 'advisor');
@@ -223,13 +227,13 @@ export function buildMcpServer(svc, { baseUrl }) {
   });
 
   tool('order_parts', {
-    title: 'Order parts', description: 'Send a parts order to a supplier. Always show the items, supplier and total to the user and get explicit confirmation before calling. If the supplier API fails, an e-mail order is prepared instead.',
+    title: 'Order parts', description: 'Place a parts order for a job with one of the shop\'s suppliers. Suppliers connected by API receive the order directly; for suppliers set up by e-mail Garagee prepares the order e-mail (recipient, subject, text) for the user to send. Always show the items, supplier and total to the user and get explicit confirmation before calling.',
     input: { jobRef: z.string(), supplierId: z.string(), items: z.array(z.object({ code: z.string(), name: z.string().max(120), qty: z.number().int().min(1).max(50), supplierPartNo: z.string().max(60).optional(), unitCost: z.number().optional(), eta: z.string().optional() })).min(1).max(30), confirmed: z.literal(true).describe('Must be true – only after the user confirmed the order') },
-    annotations: { readOnlyHint: false, destructiveHint: true, openWorldHint: true }, why: 'Sends an order to an external supplier – an irreversible commercial action.',
+    annotations: { readOnlyHint: false, destructiveHint: true, openWorldHint: true }, why: 'Places a commercial order with an external supplier (directly by API or as a prepared e-mail) – treated as irreversible.',
   }, async ({ jobRef, supplierId, items }, extra) => {
     const a = ctx(extra); need(a, 'advisor');
     const r = await svc.order(a.tenantId, jobRef, { supplierId, items, actor: a.email });
-    return { text: r.status === 'fallback_email' ? `Supplier API failed – e-mail order prepared for ${r.to}. Please send it.` : `Order ${r.status} (${r.channel}).`, data: r };
+    return { text: r.status === 'fallback_email' ? `The supplier system did not answer – an order e-mail for ${r.to} is prepared below; please send it.` : r.channel === 'email' ? `Order e-mail prepared for ${r.to} (subject: ${r.subject}). Garagee does not send e-mails itself – please send it to the supplier.\n\n${r.body}` : `Order sent to the supplier system (status: ${r.status}).`, data: r };
   });
 
   // ---------------- planning

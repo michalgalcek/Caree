@@ -134,6 +134,22 @@
           "hu-HU": {
             "subtitle": "Autószerviz-asszisztens",
             "description": "Járműátvétel szöveggel vagy hanggal, járműnyilvántartás, költségbecslés, szabad időpontok, műhelyterv és alkatrészrendelés – személyautókhoz és 3,5 t-ig kisteherautókhoz."
+          },
+          "fr-FR": {
+            "subtitle": "Assistant pour garages",
+            "description": "Réception du véhicule par écrit ou à la voix, fichier véhicules, estimations, créneaux libres, planning d’atelier et commandes de pièces – pour voitures et utilitaires jusqu’à 3,5 t."
+          },
+          "it-IT": {
+            "subtitle": "Assistente per officine",
+            "description": "Accettazione del veicolo a testo o a voce, archivio veicoli, preventivi, orari liberi, pianificazione dell’officina e ordini ricambi – per auto e veicoli commerciali fino a 3,5 t."
+          },
+          "es-ES": {
+            "subtitle": "Asistente para talleres",
+            "description": "Recepción del vehículo por texto o por voz, fichero de vehículos, presupuestos, huecos libres, planificación del taller y pedidos de piezas – para turismos y furgonetas de hasta 3,5 t."
+          },
+          "nl-NL": {
+            "subtitle": "Assistent voor garages",
+            "description": "Voertuigintake via tekst of spraak, voertuigdossier, schattingen, vrije tijden, werkplaatsplanning en onderdelenbestellingen – voor personenauto’s en bestelwagens tot 3,5 t."
           }
         }
       }

@@ -13,6 +13,7 @@ import { page, esc } from './html.js';
 import { strings, pickLanguage, LANGUAGES } from '../config/i18n.js';
 import { COUNTRIES } from '../config/countries.js';
 import { PLANS } from '../config/plans.js';
+import { WEB_LANGS, webLang, webT } from '../config/web-i18n.js';
 import { formatMoney } from '../core/estimator.js';
 import { privacyPage, termsPage, dpaPage, supportPage } from './legal.js';
 import { tabletPage, SERVICE_WORKER } from './tablet.js';
@@ -21,94 +22,102 @@ export function publicRouter(svc, { baseUrl, provider }) {
   const r = express.Router();
   const form = express.urlencoded({ extended: false, limit: '20kb' });
 
-  r.get('/', (req, res) => res.type('html').send(page('Garagee – AI workshop assistant', `
-    <h1 translate="no">Garagee</h1><p>The AI workshop assistant for repair shops servicing passenger cars and vans up to 3.5 t – vehicle intake by voice, bookings, estimates, digital inspections, workshop planning and parts ordering, right inside ChatGPT.</p>
-    <p class="muted">Available in ${LANGUAGES.length} languages with country rules for Slovakia, Czechia, Germany, Austria, Poland, Hungary, France, Italy, Spain, the Netherlands, Belgium, the UK, the US, Canada and Australia.</p>
-    <p><a href="/signup"><b>Create your shop</b></a> · <a href="/app">Workshop tablet</a> · <a href="/plans">Plans</a></p>
-    <p><a href="/privacy">Privacy</a> · <a href="/terms">Terms</a> · <a href="/dpa">DPA</a> · <a href="/support">Support</a></p>`)));
+  // Language switch shown on public website pages (?lang=xx).
+  const langBar = (path, cur) => `<p class="muted small" translate="no">${WEB_LANGS.map((l) => l === cur ? `<b>${l.toUpperCase()}</b>` : `<a href="${path}?lang=${l}">${l.toUpperCase()}</a>`).join(' · ')}</p>`;
+  const footer = (t, lang) => `<p><a href="/privacy">${t('privacy')}</a> · <a href="/terms">${t('terms')}</a> · <a href="/dpa">${t('dpa')}</a> · <a href="/support">${t('support')}</a>${lang !== 'en' ? ` <span class="muted small">(${t('legalNote')})</span>` : ''}</p>`;
+
+  r.get('/', (req, res) => {
+    const lang = webLang(req); const t = webT(lang); const q = lang === 'en' ? '' : `?lang=${lang}`;
+    res.type('html').send(page('Garagee', `${langBar('/', lang)}
+    <h1 translate="no">Garagee</h1><p>${t('tagline')}</p>
+    <p class="muted">${t('langs', { n: LANGUAGES.length })}</p>
+    <p><a href="/signup${q}"><b>${t('create')}</b></a> · <a href="/app">${t('tablet')}</a> · <a href="/plans${q}">${t('plans')}</a></p>
+    ${footer(t, lang)}`, { lang }));
+  });
 
   // ---- self-service sign-up of a shop (owner account) ----
   const signupHits = new Map();
-  const limited = (ip) => { const now = Date.now(); const h = (signupHits.get(ip) || []).filter((t) => now - t < 3600e3); h.push(now); signupHits.set(ip, h); return h.length > 5; };
+  const limited = (ip) => { const now = Date.now(); const h = (signupHits.get(ip) || []).filter((x) => now - x < 3600e3); h.push(now); signupHits.set(ip, h); return h.length > 5; };
   const countryOptions = (sel) => Object.entries(COUNTRIES).map(([k, v]) => `<option value="${k}"${k === sel ? ' selected' : ''}>${esc(v.name)}</option>`).join('');
-  const signupForm = (v = {}, err = '') => page('Create your shop – Garagee', `
-    <h1>Create your shop</h1>
-    <p class="muted">For independent repair shops servicing passenger cars and vans up to 3.5 t. You become the owner of the shop account; your shop is the controller of its customers' data and housee s.r.o. processes it on your behalf.</p>
+  const signupForm = (lang, v = {}, err = '') => { const t = webT(lang); return page(`${t('s_title')} – Garagee`, `${langBar('/signup', lang)}
+    <h1>${t('s_title')}</h1>
+    <p class="muted">${t('s_intro')}</p>
     ${err ? `<p class="err" role="alert">${esc(err)}</p>` : ''}
     <form method="post" action="/signup" class="card">
-      <label>Shop name<br><input name="shopName" required maxlength="80" value="${esc(v.shopName || '')}"></label><br>
-      <label>Country<br><select name="country" required>${countryOptions(v.country || 'SK')}</select></label><br>
-      <label>Your name<br><input name="ownerName" maxlength="80" value="${esc(v.ownerName || '')}"></label><br>
-      <label>E-mail (your login)<br><input type="email" name="email" required value="${esc(v.email || '')}" autocomplete="username"></label><br>
-      <label>Password (at least 10 characters)<br><input type="password" name="password" required minlength="10" autocomplete="new-password"></label><br>
-      <label><input type="checkbox" name="accept" value="1" required> I accept the <a href="/terms" target="_blank">Terms</a> and the <a href="/dpa" target="_blank">Data Processing Agreement</a> and have read the <a href="/privacy" target="_blank">Privacy Policy</a>.</label><br>
-      <button type="submit">Create shop</button>
-    </form>`);
-  r.get('/signup', (_q, res) => res.type('html').send(signupForm()));
+      <input type="hidden" name="lang" value="${lang}">
+      <label>${t('shopName')}<br><input name="shopName" required maxlength="80" value="${esc(v.shopName || '')}"></label><br>
+      <label>${t('country')}<br><select name="country" required>${countryOptions(v.country || { sk: 'SK', cs: 'CZ', de: 'DE', pl: 'PL', hu: 'HU', fr: 'FR', it: 'IT', es: 'ES', nl: 'NL' }[lang] || 'GB')}</select></label><br>
+      <label>${t('yourName')}<br><input name="ownerName" maxlength="80" value="${esc(v.ownerName || '')}"></label><br>
+      <label>${t('emailLogin')}<br><input type="email" name="email" required value="${esc(v.email || '')}" autocomplete="username"></label><br>
+      <label>${t('pwd10')}<br><input type="password" name="password" required minlength="10" autocomplete="new-password"></label><br>
+      <label><input type="checkbox" name="accept" value="1" required> ${t('accept', { terms: `<a href="/terms" target="_blank">${t('termsL')}</a>`, dpa: `<a href="/dpa" target="_blank">${t('dpaL')}</a>`, privacy: `<a href="/privacy" target="_blank">${t('privacyL')}</a>` })}</label><br>
+      <button type="submit">${t('createBtn')}</button>
+    </form>`, { lang }); };
+  r.get('/signup', (req, res) => res.type('html').send(signupForm(webLang(req))));
   r.post('/signup', form, (req, res) => {
-    const b = req.body || {};
-    if (limited(req.ip)) return res.status(429).type('html').send(signupForm(b, 'Too many sign-ups from this network – try again in an hour.'));
-    if (b.accept !== '1') return res.status(400).type('html').send(signupForm(b, 'Please accept the Terms and the Data Processing Agreement.'));
+    const b = req.body || {}; const lang = WEB_LANGS.includes(b.lang) ? b.lang : webLang(req); const t = webT(lang);
+    if (limited(req.ip)) return res.status(429).type('html').send(signupForm(lang, b, t('errTooMany')));
+    if (b.accept !== '1') return res.status(400).type('html').send(signupForm(lang, b, t('errAccept')));
     try {
       const { tenant, user } = svc.signup({ shopName: b.shopName, country: b.country, ownerName: b.ownerName, email: b.email, password: b.password });
-      res.type('html').send(page('Shop created – Garagee', `
-        <h1>Your shop is ready</h1>
-        <p><b>${esc(tenant.name)}</b> – sign in with <b>${esc(user.email)}</b>.</p>
-        <h2>Next steps</h2>
-        <ol>
-          <li>In ChatGPT open <b>Apps</b>, find <b>Garagee</b> and choose <b>Connect</b>. Sign in with the e-mail and password above.</li>
-          <li>Ask: <i>“Set up my workshop: 2 lifts, mechanics Peter and Jana, labour rate 45 € per hour.”</i></li>
-          <li>On the workshop tablet open <a href="/app">${esc(new URL('/app', baseUrl).href)}</a> for today's jobs and voice intake.</li>
-        </ol>
-        <p class="muted">Your public booking link for drivers: <a href="/b/${esc(tenant.publicSlug || tenant.public_slug || '')}">${esc(new URL('/b/' + (tenant.publicSlug || tenant.public_slug || ''), baseUrl).href)}</a></p>`));
+      const appUrl = new URL('/app', baseUrl).href; const bookUrl = new URL('/b/' + tenant.public_slug, baseUrl).href;
+      res.type('html').send(page(`${t('readyTitle')} – Garagee`, `
+        <h1>${t('readyTitle')}</h1>
+        <p><b>${esc(tenant.name)}</b> – ${t('signInWith')} <b>${esc(user.email)}</b>.</p>
+        <h2>${t('next')}</h2>
+        <ol><li>${t('step1')}</li><li>${t('step2')}</li><li>${t('step3', { link: `<a href="/app">${esc(appUrl)}</a>` })}</li></ol>
+        <p class="muted">${t('bookingLink')} <a href="/b/${esc(tenant.public_slug)}">${esc(bookUrl)}</a></p>`, { lang }));
     } catch (e) {
-      res.status(400).type('html').send(signupForm(b, e.message || 'Sign-up failed.'));
+      res.status(400).type('html').send(signupForm(lang, b, e.message || t('errFail')));
     }
   });
 
-
   // ---- plans (website only; never shown or linked inside ChatGPT) ----
-  r.get('/plans', (_q, res) => {
-    const lim = (v) => v == null ? 'unlimited' : v.toLocaleString('en');
-    res.type('html').send(page('Plans – Garagee', `
-    <h1><span translate="no">Garagee</span> plans</h1>
-    <p class="muted">Every shop starts on <b translate="no">Start</b>. The same limits apply in ChatGPT, on the workshop tablet and on the web. Existing vehicles always keep working; at the limit only adding new vehicles is paused.</p>
+  r.get('/plans', (req, res) => {
+    const lang = webLang(req); const t = webT(lang); const loc = lang === 'en' ? 'en' : lang;
+    const lim = (v) => v == null ? t('unlimited') : v.toLocaleString(loc);
+    const row = (label, a, b, c) => `<tr><td>${label}</td><td>${a}</td><td>${b}</td><td>${c}</td></tr>`;
+    res.type('html').send(page(`Garagee – ${t('plans')}`, `${langBar('/plans', lang)}
+    <h1><span translate="no">Garagee</span> – ${t('p_title')}</h1>
+    <p class="muted">${t('p_intro')}</p>
     <table><tr><th></th><th translate="no">Start</th><th translate="no">Profi</th><th translate="no">Workshop+</th></tr>
-      <tr><td>Active vehicles</td><td>${lim(PLANS.start.vehicles)}</td><td>${lim(PLANS.profi.vehicles)}</td><td>${lim(PLANS.workshop.vehicles)}</td></tr>
-      <tr><td>Users</td><td>1</td><td>up to 5</td><td>unlimited, several locations</td></tr>
-      <tr><td>Vehicle intake (typing or voice), estimates, free slots, bookings, workshop plan</td><td>✓</td><td>✓</td><td>✓</td></tr>
-      <tr><td>Workshop tablet with offline mode</td><td>✓</td><td>✓</td><td>✓</td></tr>
-      <tr><td>Digital inspection and customer approval link</td><td>✓</td><td>✓</td><td>✓</td></tr>
-      <tr><td>Parts orders</td><td>by e-mail</td><td>by e-mail; supplier systems – planned</td><td>by e-mail; supplier systems – planned</td></tr>
-      <tr><td>Service and inspection reminders to customers (SMS / e-mail)</td><td>–</td><td>planned</td><td>planned</td></tr>
-      <tr><td>Invoicing and accounting export</td><td>–</td><td>planned</td><td>planned</td></tr>
-      <tr><td>Model-specific labour times</td><td>catalogue</td><td>catalogue</td><td>planned</td></tr>
-      <tr><td>Data import from your previous system</td><td>–</td><td>✓ (on request)</td><td>✓ (on request)</td></tr>
-      <tr><td>Support</td><td>e-mail</td><td>priority e-mail</td><td>phone</td></tr>
+      ${row(t('vehicles'), lim(PLANS.start.vehicles), lim(PLANS.profi.vehicles), lim(PLANS.workshop.vehicles))}
+      ${row(t('users'), '1', t('upto5'), t('unlLoc'))}
+      ${row(t('r_core'), '✓', '✓', '✓')}
+      ${row(t('r_tablet'), '✓', '✓', '✓')}
+      ${row(t('r_insp'), '✓', '✓', '✓')}
+      ${row(t('r_parts'), t('byEmail'), t('supPlanned'), t('supPlanned'))}
+      ${row(t('r_remind'), '–', t('planned'), t('planned'))}
+      ${row(t('r_invoice'), '–', t('planned'), t('planned'))}
+      ${row(t('r_labour'), t('catalogue'), t('catalogue'), t('planned'))}
+      ${row(t('r_import'), '–', t('onRequest'), t('onRequest'))}
+      ${row(t('r_support'), t('sEmail'), t('sPrio'), t('sPhone'))}
     </table>
-    <p><span translate="no">Profi</span> and <span translate="no">Workshop+</span> are arranged directly with <span translate="no">housee s.r.o.</span> – write to <a href="/support">support</a>.</p>`));
+    <p>${t('contact', { profi: '<span translate="no">Profi</span>', ws: '<span translate="no">Workshop+</span>', co: '<span translate="no">housee s.r.o.</span>', support: `<a href="/support">${t('support')}</a>` })}</p>
+    ${footer(t, lang)}`, { lang }));
   });
 
   // ---- account deletion by the shop owner ----
-  const deleteForm = (err = '') => page('Delete shop account – Garagee', `
-    <h1>Delete your shop account</h1>
-    <p>This permanently deletes your shop and all data stored for it in Garagee: customers, vehicles, jobs, inspections, settings and all user accounts of the shop. Export anything you need first (in ChatGPT: “export the data of customer …”). This cannot be undone.</p>
+  const deleteForm = (lang, err = '') => { const t = webT(lang); return page(`${t('d_title')} – Garagee`, `${langBar('/account/delete', lang)}
+    <h1>${t('d_title')}</h1>
+    <p>${t('d_text')}</p>
     ${err ? `<p class="err" role="alert">${esc(err)}</p>` : ''}
     <form method="post" action="/account/delete" class="card">
-      <label>Owner e-mail<br><input type="email" name="email" required autocomplete="username"></label><br>
-      <label>Password<br><input type="password" name="password" required autocomplete="current-password"></label><br>
-      <label>Type DELETE to confirm<br><input name="confirm" required pattern="DELETE"></label><br>
-      <button type="submit">Delete permanently</button>
-    </form>`);
-  r.get('/account/delete', (_q, res) => res.type('html').send(deleteForm()));
+      <input type="hidden" name="lang" value="${lang}">
+      <label>${t('ownerEmail')}<br><input type="email" name="email" required autocomplete="username"></label><br>
+      <label>${t('password')}<br><input type="password" name="password" required autocomplete="current-password"></label><br>
+      <label>${t('typeDelete')}<br><input name="confirm" required pattern="DELETE"></label><br>
+      <button type="submit">${t('deleteBtn')}</button>
+    </form>`, { lang }); };
+  r.get('/account/delete', (req, res) => res.type('html').send(deleteForm(webLang(req))));
   r.post('/account/delete', form, (req, res) => {
-    const b = req.body || {};
-    if (b.confirm !== 'DELETE') return res.status(400).type('html').send(deleteForm('Type DELETE to confirm.'));
+    const b = req.body || {}; const lang = WEB_LANGS.includes(b.lang) ? b.lang : webLang(req); const t = webT(lang);
+    if (b.confirm !== 'DELETE') return res.status(400).type('html').send(deleteForm(lang, t('errType')));
     const c = provider ? provider.checkLogin(b.email, b.password) : { user: svc.login(b.email, b.password) };
-    if (!c.user) return res.status(c.status || 401).type('html').send(deleteForm(c.error || 'Wrong e-mail or password.'));
-    if (c.user.role !== 'owner') return res.status(403).type('html').send(deleteForm('Only the shop owner can delete the shop.'));
+    if (!c.user) return res.status(c.status || 401).type('html').send(deleteForm(lang, c.status === 429 ? c.error : t('errWrong')));
+    if (c.user.role !== 'owner') return res.status(403).type('html').send(deleteForm(lang, t('errOwner')));
     svc.deleteTenant(c.user.tenantId);
-    res.type('html').send(page('Shop deleted – Garagee', '<h1>Your shop has been deleted</h1><p>All data stored for it in Garagee was removed. Copies in backups expire automatically within 30 days.</p>'));
+    res.type('html').send(page(`${t('deletedTitle')} – Garagee`, `<h1>${t('deletedTitle')}</h1><p>${t('deletedText')}</p>`, { lang }));
   });
 
   r.get('/privacy', (_q, res) => res.type('html').send(privacyPage()));

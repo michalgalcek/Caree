@@ -39,6 +39,10 @@ export const INTAKE_LABELS = {
   de: { category: 'Fahrzeugart (Pkw / Transporter bis 3,5 t)', maxWeightKg: 'Zulässige Gesamtmasse (kg)', plate: 'Kennzeichen', vin: 'FIN', make: 'Marke', model: 'Modell', year: 'Baujahr', fuel: 'Kraftstoff', firstRegistration: 'Erstzulassung', lastInspection: 'Letzte HU', mileage: 'Kilometerstand', fuelLevel: 'Tank / Ladung', warningLights: 'Warnleuchten', damage: 'Sichtbare Schäden', tyres: 'Reifen', itemsInCar: 'Gegenstände im Auto', keys: 'Schlüssel', customerName: 'Kundenname', customerPhone: 'Telefon', customerEmail: 'E-Mail', complaint: 'Problem / Auftrag', customerWaiting: 'Kunde wartet', promisedBy: 'Zugesagt bis', notes: 'Notizen' },
   pl: { category: 'Rodzaj pojazdu (osobowy / dostawczy do 3,5 t)', maxWeightKg: 'DMC (kg)', plate: 'Nr rejestracyjny', vin: 'VIN', make: 'Marka', model: 'Model', year: 'Rok', fuel: 'Paliwo', firstRegistration: 'Pierwsza rejestracja', lastInspection: 'Ostatni przegląd', mileage: 'Przebieg', fuelLevel: 'Paliwo / naładowanie', warningLights: 'Kontrolki', damage: 'Widoczne uszkodzenia', tyres: 'Opony', itemsInCar: 'Rzeczy w aucie', keys: 'Klucze', customerName: 'Klient', customerPhone: 'Telefon', customerEmail: 'E-mail', complaint: 'Problem / zlecenie', customerWaiting: 'Klient czeka', promisedBy: 'Obiecane do', notes: 'Uwagi' },
   hu: { category: 'Járműtípus (személy / kishaszon 3,5 t-ig)', maxWeightKg: 'Megengedett össztömeg (kg)', plate: 'Rendszám', vin: 'Alvázszám', make: 'Márka', model: 'Modell', year: 'Évjárat', fuel: 'Üzemanyag', firstRegistration: 'Első forgalomba helyezés', lastInspection: 'Utolsó műszaki', mileage: 'Km-óra állás', fuelLevel: 'Üzemanyag / töltöttség', warningLights: 'Figyelmeztető lámpák', damage: 'Látható sérülés', tyres: 'Gumik', itemsInCar: 'Tárgyak az autóban', keys: 'Kulcsok', customerName: 'Ügyfél neve', customerPhone: 'Telefon', customerEmail: 'E-mail', complaint: 'Probléma / megrendelés', customerWaiting: 'Ügyfél vár', promisedBy: 'Ígért határidő', notes: 'Megjegyzés' },
+  fr: { category: 'Type de véhicule (voiture / utilitaire ≤ 3,5 t)', maxWeightKg: 'PTAC (kg)', plate: 'Immatriculation', vin: 'VIN', make: 'Marque', model: 'Modèle', year: 'Année', fuel: 'Carburant', firstRegistration: 'Première immatriculation', lastInspection: 'Dernier contrôle technique', mileage: 'Kilométrage', fuelLevel: 'Niveau carburant / charge', warningLights: 'Voyants', damage: 'Dommages visibles', tyres: 'Pneus', itemsInCar: 'Objets dans le véhicule', keys: 'Clés', customerName: 'Nom du client', customerPhone: 'Téléphone du client', customerEmail: 'E-mail du client', complaint: 'Problème / travaux demandés', customerWaiting: 'Le client attend', promisedBy: 'Promis pour', notes: 'Notes' },
+  it: { category: 'Tipo di veicolo (auto / commerciale ≤ 3,5 t)', maxWeightKg: 'Massa complessiva (kg)', plate: 'Targa', vin: 'Telaio (VIN)', make: 'Marca', model: 'Modello', year: 'Anno', fuel: 'Alimentazione', firstRegistration: 'Prima immatricolazione', lastInspection: 'Ultima revisione', mileage: 'Chilometraggio', fuelLevel: 'Livello carburante / carica', warningLights: 'Spie accese', damage: 'Danni visibili', tyres: 'Pneumatici', itemsInCar: 'Oggetti nel veicolo', keys: 'Chiavi', customerName: 'Nome cliente', customerPhone: 'Telefono cliente', customerEmail: 'E-mail cliente', complaint: 'Problema / lavori richiesti', customerWaiting: 'Il cliente attende', promisedBy: 'Promesso per', notes: 'Note' },
+  es: { category: 'Tipo de vehículo (turismo / furgoneta ≤ 3,5 t)', maxWeightKg: 'MMA (kg)', plate: 'Matrícula', vin: 'Bastidor (VIN)', make: 'Marca', model: 'Modelo', year: 'Año', fuel: 'Combustible', firstRegistration: 'Primera matriculación', lastInspection: 'Última ITV', mileage: 'Kilometraje', fuelLevel: 'Nivel de combustible / carga', warningLights: 'Testigos encendidos', damage: 'Daños visibles', tyres: 'Neumáticos', itemsInCar: 'Objetos en el vehículo', keys: 'Llaves', customerName: 'Nombre del cliente', customerPhone: 'Teléfono del cliente', customerEmail: 'E-mail del cliente', complaint: 'Problema / trabajo solicitado', customerWaiting: 'El cliente espera', promisedBy: 'Prometido para', notes: 'Notas' },
+  nl: { category: 'Voertuigtype (personenauto / bestelwagen ≤ 3,5 t)', maxWeightKg: 'Toegestane maximummassa (kg)', plate: 'Kenteken', vin: 'Chassisnummer (VIN)', make: 'Merk', model: 'Model', year: 'Bouwjaar', fuel: 'Brandstof', firstRegistration: 'Eerste toelating', lastInspection: 'Laatste APK', mileage: 'Kilometerstand', fuelLevel: 'Brandstof / lading', warningLights: 'Waarschuwingslampjes', damage: 'Zichtbare schade', tyres: 'Banden', itemsInCar: 'Spullen in de auto', keys: 'Sleutels', customerName: 'Naam klant', customerPhone: 'Telefoon klant', customerEmail: 'E-mail klant', complaint: 'Probleem / gevraagd werk', customerWaiting: 'Klant wacht', promisedBy: 'Beloofd voor', notes: 'Notities' },
 };
 export const intakeLabels = (lang) => ({ ...INTAKE_LABELS.en, ...(INTAKE_LABELS[(lang || 'en').slice(0, 2)] || {}) });
 
@@ -50,6 +54,7 @@ const NUM_WORDS = { // spoken digits in sk/cs/en/de/pl so dictated plates/km com
   nula: '0', jedna: '1', jeden: '1', dva: '2', dve: '2', tri: '3', štyri: '4', styri: '4', čtyři: '4', päť: '5', pät: '5', pět: '5', šesť: '6', šest: '6', sedem: '7', sedm: '7', osem: '8', osm: '8', deväť: '9', devät: '9', devět: '9',
   zero: '0', one: '1', two: '2', three: '3', four: '4', five: '5', six: '6', seven: '7', eight: '8', nine: '9',
   null: '0', eins: '1', zwei: '2', drei: '3', vier: '4', fünf: '5', sechs: '6', sieben: '7', acht: '8', neun: '9',
+  ein: '1', eine: '1', dwa: '2', dwie: '2', trzy: '3', un: '1', une: '1', deux: '2', trois: '3', uno: '1', una: '1', due: '2', tre: '3', dos: '2', tres: '3', een: '1', twee: '2', drie: '3',
 };
 
 function norm(text) {
@@ -58,7 +63,7 @@ function norm(text) {
 
 const FUEL_WORDS = [
   [/\b(elektr\w*|ev|electric|bev)\b/i, 'EV'], [/\b(hybrid\w*)\b/i, 'HYBRID'], [/\b(lpg)\b/i, 'LPG'], [/\b(cng)\b/i, 'CNG'],
-  [/\b(diesel|nafta|naft\w*|tdi|hdi|cdi|dci|crdi)\b/i, 'DIESEL'], [/\b(benz[ií]n\w*|petrol|gasoline|tsi|tfsi)\b/i, 'PETROL'],
+  [/\b(diesel|nafta|naft\w*|gazole|gasolio|gas[oó]leo|tdi|hdi|cdi|dci|crdi)\b/i, 'DIESEL'], [/\b(benz[ií]n\w*|benzyn\w*|benzine|petrol|gasoline|gasolina|essence|tsi|tfsi)\b/i, 'PETROL'],
 ];
 
 // Makes sold as M1/N1 in Europe and our tier-3 markets. "Škoda" needs a capital or a Škoda model (lower-case
@@ -120,11 +125,11 @@ export function parseIntakeText(raw, { country = 'SK' } = {}) {
   }
 
   // mileage: "142 000 km", "142000 km", "stav km 142 tisíc", "nájazd 98500"
-  const km = lower.match(/(\d{1,3}(?:[ .]\d{3}|,\d{3})+|\d{1,7})\s*(?:tis\p{L}*|k(?![\p{L}\d])|000)?\s*(km|kilometr\p{L}*|kilometer\p{L}*|m[ií]l\p{L}*)(?![\p{L}\d])/u)
-    || lower.match(/(?:stav\s*km|tachometer|tachometr|n[aá]jazd|najazden\p{L}*|najeto|mileage|kilometerstand|przebieg)\D{0,12}(\d{1,3}(?:[ .]\d{3})+|\d{1,7})(\s*tis\p{L}*)?/u);
+  const km = lower.match(/(\d{1,3}(?:[ .]\d{3}|,\d{3})+|\d{1,7})\s*(?:tis\p{L}*|mille|mila|mil|duizend|tausend|thousand|k(?![\p{L}\d])|000)?\s*(km|kilometr\p{L}*|kilometer\p{L}*|m[ií]l\p{L}*)(?![\p{L}\d])/u)
+    || lower.match(/(?:stav\s*km|tachometer|tachometr|n[aá]jazd|najazden\p{L}*|najeto|mileage|kilometerstand|kilom[eé]trage|chilometraggio|kilometraje|kilometerstand|przebieg)\D{0,12}(\d{1,3}(?:[ .]\d{3})+|\d{1,7})(\s*tis\p{L}*)?/u);
   if (km) {
     let n = Number(km[1].replace(/[ .,]/g, ''));
-    if (/tis/.test(km[0]) && n < 2000) n *= 1000;
+    if (/tis|mille|mila|\bmil\b|duizend|tausend|thousand/.test(km[0]) && n < 2000) n *= 1000;
     if (n > 0 && n < 3000000) fields.mileage = n;
   }
 
@@ -136,7 +141,7 @@ export function parseIntakeText(raw, { country = 'SK' } = {}) {
   if (em) fields.customerEmail = em[0].toLowerCase();
 
   // licence plate – after a keyword, or SK/CZ pattern (e.g. ZA 123AB, ZA-123AB, 1AB 2345)
-  const plateKw = text.match(/(?:EČV|ECV|ŠPZ|SPZ|plate|kennzeichen|rendszám|numer rej\w*)[:\s]+([A-Z0-9][A-Z0-9 -]{3,10}[A-Z0-9])/i);
+  const plateKw = text.match(/(?:EČV|ECV|ŠPZ|SPZ|plate|kennzeichen|rendszám|numer rej\w*|immatriculation|targa|matr[ií]cula|kenteken)[:\s]+([A-Z0-9][A-Z0-9 -]{3,10}[A-Z0-9])/i);
   const plateSk = text.toUpperCase().match(/\b([A-Z]{2})[ -]?(\d{3})[ -]?([A-Z]{2})\b/);
   const plateCz = text.toUpperCase().match(/\b(\d[A-Z]\d)[ -]?(\d{4})\b/);
   if (plateKw) fields.plate = plateKw[1].toUpperCase().replace(/-/g, ' ').trim();
@@ -148,8 +153,8 @@ export function parseIntakeText(raw, { country = 'SK' } = {}) {
 
   // vehicle category: van / light commercial → N1, passenger car → M1
   const B = '(?<![\\p{L}\\d])', E = '(?![\\p{L}\\d])';
-  if (new RegExp(`${B}(dod[aá]vk\\p{L}*|[uú][zž]itkov\\p{L}*|van|transporter|furgon\\p{L}*|dostawcz\\p{L}*|kisteherg\\p{L}*|pick-?up|N1)${E}`, 'iu').test(text)) fields.category = 'N1';
-  else if (new RegExp(`${B}(osobn\\p{L}*|osobák|passenger car|pkw|osobow\\p{L}*|személyaut\\p{L}*|M1)${E}`, 'iu').test(text)) fields.category = 'M1';
+  if (new RegExp(`${B}(dod[aá]vk\\p{L}*|[uú][zž]itkov\\p{L}*|van|transporter|furgon\\p{L}*|furgone|furgoneta|utilitaire|bestelwagen|bestelbus|dostawcz\\p{L}*|kisteherg\\p{L}*|pick-?up|N1)${E}`, 'iu').test(text)) fields.category = 'N1';
+  else if (new RegExp(`${B}(osobn\\p{L}*|osobák|passenger car|pkw|voiture|vettura|coche|turismo|personenauto|osobow\\p{L}*|személyaut\\p{L}*|M1)${E}`, 'iu').test(text)) fields.category = 'M1';
   const wt = lower.match(/(\d{1,2}(?:[.,]\d{1,2})?)\s*(t|ton\w*)\b|(\d{3,5})\s*kg\b/);
   if (wt && /hmotnos|weight|gewicht|masa|tömeg|ton|\bt\b|kg/.test(lower)) {
     const kg = wt[3] ? Number(wt[3]) : Math.round(Number(wt[1].replace(',', '.')) * 1000);
@@ -157,13 +162,13 @@ export function parseIntakeText(raw, { country = 'SK' } = {}) {
   }
 
   // fuel level: "nádrž 1/4", "palivo pol", "fuel 50 %", "nabitie 80 %"
-  const fl = lower.match(/(?:n[aá]dr[zž]\w*|palivo|fuel|tank|nabitie|nabit[ií]|battery|charge|bat[eé]ri\w*)\D{0,10}(\d\/\d|\d{1,3}\s*%|pln[aá]|full|pr[aá]zdn\w*|empty|pol\w*|half|rezerv\w*|reserve)/);
+  const fl = lower.match(/(?:n[aá]dr[zž]\w*|palivo|paliw\w*|üzemanyag\w*|fuel|tank|nabitie|nabit[ií]|battery|charge|bat[eé]ri\w*|r[eé]servoir|carburant|serbatoio|dep[oó]sito|brandstof)\D{0,10}(\d\/\d|\d{1,3}\s*%|pln[aá]|full|voll|pe[lł]n\w*|plein|pieno|lleno|vol|pr[aá]zdn\w*|empty|leer|pust\w*|vide|vuoto|vac[ií]o|leeg|pol\w*|half|halb\w*|p[oó][lł]|moiti[eé]|met[aà]|medio|rezerv\w*|reserve|r[eé]serve|riserva)/);
   if (fl) {
     const v = fl[1];
-    fields.fuelLevel = /pln|full/.test(v) ? '4/4' : /pr[aá]zd|empty|rezerv|reserve/.test(v) ? '0/4 (reserve)' : /pol|half/.test(v) ? '2/4' : v.replace(/\s+/g, '');
+    fields.fuelLevel = /pln|full|voll|pe[lł]n|plein|pieno|lleno|^vol$/.test(v) ? '4/4' : /pr[aá]zd|empty|leer|pust|vide|vuoto|vac|leeg|rezerv|reserve|r[eé]serve|riserva/.test(v) ? '0/4 (reserve)' : /pol|half|halb|p[oó][lł]|moiti|met[aà]|medio/.test(v) ? '2/4' : v.replace(/\s+/g, '');
   }
 
-  const yr = lower.match(/(?:rok|year|r\.\s?v\.|baujahr|rocznik|évjárat)\D{0,6}((?:19|20)\d{2})/)
+  const yr = lower.match(/(?:rok|year|r\.\s?v\.|baujahr|rocznik|évjárat|ann[eé]e|anno|a[nñ]o|bouwjaar)\D{0,6}((?:19|20)\d{2})/)
     || lower.match(/(?<![\d.\/-])((?:19[89]|20[0-4])\d)(?![\d.\/-])(?!\s*(?:km|tis|kg|eur|€))/u);
   if (yr) fields.year = Number(yr[1]);
 
@@ -172,27 +177,27 @@ export function parseIntakeText(raw, { country = 'SK' } = {}) {
   if (mm.make) fields.make = mm.make;
   if (mm.model) fields.model = mm.model;
 
-  const keys = lower.match(/(\d|jeden|jedna|dva|dve|tri|one|two|three)\s*(?:k[lľ][uúi]č\w*|keys?|schlüssel|klucz\w*|kulcs\w*)/);
+  const keys = lower.match(/(\d|jeden|jedna|dva|dve|tri|one|two|three|eine?|zwei|drei|dwa|dwie|trzy|une?|deux|trois|uno|una|due|tre|dos|tres|een|twee|drie)\s*(?:k[lľ][uúi]č\w*|keys?|schlüssel|klucz\w*|kulcs\w*|cl[eé]s?|chiav[ei]|llaves?|sleutels?)/);
   if (keys) fields.keys = Number(NUM_WORDS[keys[1]] || keys[1]);
 
-  const waits = /(z[aá]kazn[ií]k\s*(po)?[cč]ak[aá]|customer\s*(is\s*)?waiting|kunde\s*wartet|klient\s*czeka)/i.test(text);
+  const waits = /(z[aá]kazn[ií]k\s*(po)?[cč]ak[aá]|customer\s*(is\s*)?waiting|kunde\s*wartet|klient\s*czeka|client\s*attend|cliente\s*(aspetta|espera)|klant\s*wacht)/i.test(text);
   if (waits) fields.customerWaiting = true;
 
   // keyword sections: "poškodenie: ...", "kontrolky: ...", "závada: ..." – a value ends at the next section,
   // at another dictated field ("dva kľúče", "zákazník …", "54 tisíc km") or at . ; newline
   const sections = {
-    damage: /(?:po[sš]koden\p{L}*|[sš]krabanc\p{L}*|damage|scratch\p{L}*|schaden|delle|uszkodz\p{L}*|sérülés)/iu,
-    warningLights: /(?:kontrolk\p{L}*|warning lights?|warnleucht\p{L}*|figyelmeztet\p{L}*)/iu,
-    complaint: /(?:z[aá]vad\p{L}*|probl[eé]m\p{L}*|po[zž]iadavk\p{L}*|po[zž]adav\p{L}*|complaint|issue|auftrag|usterk\p{L}*|hiba)/iu,
-    itemsInCar: /(?:vo vozidle|v aute|ve voze|items? in (?:the )?car|im auto|w aucie|autóban)/iu,
-    tyres: /(?:pneumatik\p{L}*|tyres?|tires?|reifen|opon\p{L}*)/iu,
+    damage: /(?:po[sš]koden\p{L}*|[sš]krabanc\p{L}*|damage|scratch\p{L}*|schaden|delle|uszkodz\p{L}*|sérülés|dommages?|d[eé]g[aâ]ts?|rayures?|dann[oi]|graffi\p{L}*|da[nñ]os?|ray[oó]n\p{L}*|schade|krassen?)/iu,
+    warningLights: /(?:kontrolk\p{L}*|warning lights?|warnleucht\p{L}*|figyelmeztet\p{L}*|voyants?|spi[ae]|testigos?|waarschuwingslamp\p{L}*|lampjes?)/iu,
+    complaint: /(?:z[aá]vad\p{L}*|probl[eéè]m\p{L}*|po[zž]iadavk\p{L}*|po[zž]adav\p{L}*|complaint|issue|auftrag|usterk\p{L}*|hiba|panne|guasto|aver[ií]a|klacht|storing)/iu,
+    itemsInCar: /(?:vo vozidle|v aute|ve voze|items? in (?:the )?car|im auto|w aucie|autóban|dans la voiture|in auto|en el coche|in de auto)/iu,
+    tyres: /(?:pneumatik\p{L}*|tyres?|tires?|reifen|opon\p{L}*|pneus?|pneumatici|gomme|neum[aá]ticos?|banden)/iu,
   };
   const starts = [];
   for (const [key, re] of Object.entries(sections)) {
     for (const m of text.matchAll(new RegExp('(?<![\\p{L}\\d])' + re.source + '[^:\\n]{0,20}?\\s*[:–]\\s*', 'giu'))) starts.push({ key, at: m.index, valueAt: m.index + m[0].length });
   }
   starts.sort((a, b) => a.at - b.at);
-  const STOP = new RegExp('(?<![\\p{L}\\d])(?:(?:\\d|jeden|jedna|dva|dve|tri|one|two|three)\\s*(?:k[lľ][uúi]\\p{L}*|keys?|schlüssel|klucz\\p{L}*|kulcs\\p{L}*)|z[aá]kazn[ií]\\p{L}*|majite[lľ]\\p{L}*|customer|kunde|klient|n[aá]dr[zž]\\p{L}*|tankol\\p{L}*|E[ČC]V|[SŠ]PZ|VIN|telef\\p{L}*|\\d[\\d .]*\\s*(?:tis\\p{L}*\\s*)?km)(?![\\p{L}])', 'iu');
+  const STOP = new RegExp('(?<![\\p{L}\\d])(?:(?:\\d|jeden|jedna|dva|dve|tri|one|two|three|eine?|zwei|drei|dwa|dwie|trzy|une?|deux|trois|uno|una|due|tre|dos|tres|een|twee|drie)\\s*(?:k[lľ][uúi]\\p{L}*|keys?|schlüssel|klucz\\p{L}*|kulcs\\p{L}*|cl[eé]s?|chiav[ei]|llaves?|sleutels?)|z[aá]kazn[ií]\\p{L}*|majite[lľ]\\p{L}*|customer|kunde|klient|client|cliente|klant|propri[eé]taire|proprietario|propietario|eigenaar|n[aá]dr[zž]\\p{L}*|tankol\\p{L}*|E[ČC]V|[SŠ]PZ|VIN|telef\\p{L}*|\\d[\\d .]*\\s*(?:tis\\p{L}*\\s*)?km)(?![\\p{L}])', 'iu');
   for (let i = 0; i < starts.length; i++) {
     const st = starts[i]; if (fields[st.key]) continue;
     let end = i + 1 < starts.length ? starts[i + 1].at : text.length;
@@ -202,14 +207,14 @@ export function parseIntakeText(raw, { country = 'SK' } = {}) {
     v = v.replace(/[\s,–-]+$/u, '').trim();
     if (v.length >= 2) fields[st.key] = v.slice(0, 200);
   }
-  const NONE = /^(?:[zž][ií]adn\p{L}*|nesviet\p{L}*|nie|none|no|off|ok|keine|brak|nincs|bez\b.*)$/iu;
+  const NONE = /^(?:[zž][ií]adn\p{L}*|nesviet\p{L}*|nie|none|no|off|ok|keine?|brak|nincs|aucune?|rien|nessun[ao]?|ningun[oa]?|geen|bez\b.*)$/iu;
   if (fields.warningLights && NONE.test(fields.warningLights)) fields.warningLights = 'none';
   if (fields.damage && NONE.test(fields.damage)) fields.damage = 'none';
   if (!fields.warningLights && /(bez kontrol\p{L}*|[zž][ií]adn\p{L}* kontrolk\p{L}*|kontrolk\p{L}*\s+(?:[zž][ií]adn\p{L}*|nesviet\p{L}*|nesvít\p{L}*|ok)|no warning lights)/iu.test(text)) fields.warningLights = 'none';
   if (!fields.damage && /(bez po[sš]koden\p{L}*|no (visible )?damage|keine sch[aä]den)/iu.test(text)) fields.damage = 'none';
 
   // customer name: "zákazník Ján Novák", "meno Jana Malá", "customer John Smith" – keyword any case, name capitalised
-  const nmRe = /(?:z[aá]kazn[ií]k|z[aá]kaznic\p{L}*|majite[lľ]\p{L}*|meno|jm[eé]no|customer|owner|kunde|klient)[:\s]+((?:\p{Lu}[\p{L}'-]+\s?){2,3})/giu;
+  const nmRe = /(?:z[aá]kazn[ií]k|z[aá]kaznic\p{L}*|majite[lľ]\p{L}*|meno|jm[eé]no|customer|owner|kunde|klient|client[ea]?|klant|propri[eé]taire|proprietario|propietario|eigenaar)[:\s]+((?:\p{Lu}[\p{L}'-]+\s?){2,3})/giu;
   for (const m of text.matchAll(nmRe)) {
     const name = m[1].trim().split(/\s+/).filter((w) => !/^(telef\p{L}*|tel|phone|čak\p{L}*|cak\p{L}*)$/iu.test(w)).join(' ');
     if (name.split(' ').length >= 2) { fields.customerName = name; break; }

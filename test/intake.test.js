@@ -95,3 +95,21 @@ test('Plan limit: Start plan stops at 1000 active vehicles, archived ones free a
   assert.ok(svc.addVehicle(tid, { plate: 'ZA 999XX' }).vehicle.id);
   svc.setPlan(tid, 'profi'); assert.equal(svc.usage(tid).vehicleLimit, 5000);
 });
+
+test('intake parser: French, Italian, Spanish, Dutch, German and Polish dictation', () => {
+  const cases = {
+    FR: ["voiture immatriculation AB-123-CD, Peugeot 308 2018 gazole, 85 mille km, réservoir moitié, voyants : aucun, client Marie Dupont +33 612 345 678, problème : bruit au freinage, dommages : rayure porte arrière, deux clés", 85000],
+    IT: ["vettura targa AB 123 CD, Fiat Panda 2017 benzina, 64 mila km, serbatoio metà, spie: nessuna, cliente Marco Rossi +39 347 123 4567, guasto: rumore dai freni, danni: graffio paraurti, due chiavi", 64000],
+    ES: ["coche matrícula 1234 ABC, Seat Ibiza 2019 gasolina, 52 mil km, depósito medio, testigos: ninguno, cliente Ana García +34 612 345 678, avería: ruido al frenar, daños: rayón puerta, dos llaves", 52000],
+    NL: ["personenauto kenteken AB-123-C, Opel Corsa 2020 benzine, 40 duizend km, brandstof half, lampjes: geen, klant Jan de Vries +31 612 345 678, klacht: piepende remmen, schade: kras achterbumper, twee sleutels", 40000],
+    DE: ["Pkw Kennzeichen M AB 1234, VW Golf 2018 Diesel, 120 tausend km, Tank halb, Warnleuchten: keine, Kunde Hans Müller +49 171 234 5678, Auftrag: Bremsen quietschen, Schaden: Kratzer Heckklappe, zwei Schlüssel", 120000],
+    PL: ["osobowy numer rej WX 12345, Toyota Yaris 2016 benzyna, 98000 km, paliwo pół, kontrolki: brak, klient Jan Kowalski +48 601 234 567, usterka: stuki w zawieszeniu, uszkodzenia: rysa na drzwiach, dwa klucze", 98000],
+  };
+  for (const [country, [text, km]] of Object.entries(cases)) {
+    const f = parseIntakeText(text, { country }).fields;
+    assert.equal(f.mileage, km, country); assert.equal(f.keys, 2, country); assert.equal(f.fuelLevel, '2/4', country);
+    assert.equal(f.warningLights, 'none', country); assert.ok(f.customerName && f.complaint && f.damage && f.plate && f.make, country);
+    assert.ok(!/\d\s*(cl|chiav|llav|sleut|schl|klucz)/i.test(f.damage), country + ' damage must not swallow keys');
+    assert.deepEqual(intakeStatus(f).missing, [], country);
+  }
+});
