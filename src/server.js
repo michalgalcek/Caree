@@ -18,8 +18,10 @@ export function createApp({ db = openDb(), baseUrl = process.env.PUBLIC_URL || '
   if (seed) {
     try { seedDemo(svc); } catch (e) { console.warn(`[garagee] demo account not created: ${e.message}`); }
     // Separate English-language account for the OpenAI reviewers (own shop, own data, UK settings).
-    if (process.env.REVIEW_EMAIL && process.env.REVIEW_PASSWORD) {
-      try { seedDemo(svc, { email: process.env.REVIEW_EMAIL.trim().toLowerCase(), password: process.env.REVIEW_PASSWORD.trim(), country: (process.env.REVIEW_COUNTRY || 'GB').toUpperCase() }); }
+    // Password: REVIEW_PASSWORD if set, otherwise the DEMO_PASSWORD secret.
+    const reviewPassword = process.env.REVIEW_PASSWORD || process.env.DEMO_PASSWORD;
+    if (process.env.REVIEW_EMAIL && reviewPassword) {
+      try { seedDemo(svc, { email: process.env.REVIEW_EMAIL.trim().toLowerCase(), password: reviewPassword.trim(), country: (process.env.REVIEW_COUNTRY || 'GB').toUpperCase() }); }
       catch (e) { console.warn(`[garagee] review account not created: ${e.message}`); }
     }
   }
