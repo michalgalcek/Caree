@@ -5,7 +5,8 @@ primary_region = "fra"
 [build]
 
 [env]
-  PUBLIC_URL = "https://caree.housee.sk"
+  PUBLIC_URL = "https://garagee.housee.sk"
+  LEGACY_HOSTS = "caree.housee.sk"
   NODE_ENV = "production"
   COMPANY_NAME = "housee s.r.o."
   COMPANY_ADDRESS = "Ovčiarsko 210, 010 04 Ovčiarsko, Slovakia; registered in the Business Register of the District Court Žilina, section Sro, file 71188/L"
