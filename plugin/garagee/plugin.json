@@ -91,7 +91,7 @@
             }
           ]
         },
-        "demo_recording_url": "https://REPLACE-WITH-VIDEO-URL",
+        "demo_recording_url": "https://garagee.housee.sk/demo.mp4",
         "commerce": false,
         "commerce_description": "No commerce in ChatGPT. Garagee does not sell, show plans, prices of Garagee or checkout links. Parts orders go to the shop's own suppliers under the shop's existing accounts, only after the user confirms."
       },

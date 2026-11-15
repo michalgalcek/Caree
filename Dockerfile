@@ -5,6 +5,7 @@ COPY package.json package-lock.json ./
 RUN npm ci --omit=dev
 COPY src ./src
 COPY scripts ./scripts
+COPY public ./public
 RUN mkdir -p /data && chown node:node /data
 USER node
 ENV PORT=8080 CAREE_DB=/data/caree.db

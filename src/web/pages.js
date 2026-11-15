@@ -125,6 +125,8 @@ export function publicRouter(svc, { baseUrl, provider }) {
   r.get('/dpa', (_q, res) => res.type('html').send(dpaPage()));
   r.get('/support', (_q, res) => res.type('html').send(supportPage()));
   r.get('/health', (_q, res) => res.json({ ok: true }));
+  // Public demo video (used in the OpenAI app listing).
+  r.get('/demo.mp4', (_q, res) => res.set('cache-control', 'public, max-age=86400').sendFile(new URL('../../public/garagee-demo.mp4', import.meta.url).pathname));
   r.get(['/logo.svg', '/favicon.svg'], (_q, res) => res.type('image/svg+xml').set('cache-control', 'public, max-age=86400').send(LOGO_SVG));
   r.get('/.well-known/openai-apps-challenge', (_q, res) => {
     if (!process.env.OPENAI_APPS_CHALLENGE) return res.status(404).type('text').send('not configured');
