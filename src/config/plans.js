@@ -2,7 +2,7 @@
 // Plans are sold and changed only on the Garagee website – never inside ChatGPT.
 export const PLANS = {
   start: { name: 'Start', vehicles: 1000, users: 1 },
-  profi: { name: 'Profi', vehicles: 2000, users: 5 },
+  profi: { name: 'Profi', vehicles: 5000, users: 5 },
   workshop: { name: 'Workshop+', vehicles: null, users: null },
   unlimited: { name: 'Unlimited (internal / review)', vehicles: null, users: null },
 };

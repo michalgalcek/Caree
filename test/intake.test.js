@@ -93,5 +93,5 @@ test('Plan limit: Start plan stops at 1000 active vehicles, archived ones free a
   assert.equal(known.limitReached, false);
   svc.archiveVehicle(tid, last.id, { actor: 'test' });
   assert.ok(svc.addVehicle(tid, { plate: 'ZA 999XX' }).vehicle.id);
-  svc.setPlan(tid, 'profi'); assert.equal(svc.usage(tid).vehicleLimit, 2000);
+  svc.setPlan(tid, 'profi'); assert.equal(svc.usage(tid).vehicleLimit, 5000);
 });
