@@ -512,7 +512,7 @@ export class Garagee {
     const r = { id: id(), ref: nextRef(this, tid, 'intakes', 'I-') };
     const ts = nowIso();
     this.q('INSERT INTO intakes (id,tenant_id,ref,status,data,transcript,vehicle_id,created_by,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?)')
-      .run(r.id, tid, r.ref, 'draft', J.str(data), text ? String(text).slice(0, 5000) : '', pre.existing?.id || null, actor, ts, ts);
+      .run(r.id, tid, r.ref, 'draft', J.str(data), '', pre.existing?.id || null, actor, ts, ts); // raw text is parsed, not stored (data minimisation)
     this.audit(tid, actor, 'intake.start', 'intake', r.id);
     return { ...this.intakeView(tid, this.intakeRow(tid, r.ref)), recognised: Object.keys(parsed.fields), knownVehicle: !!pre.existing };
   }
@@ -527,7 +527,7 @@ export class Garagee {
       const pre = this.intakePrefill(tid, data);
       final = pre.data; vehicleId = pre.existing?.id || null;
     }
-    const transcript = [r.transcript, text].filter(Boolean).join('\n').slice(0, 20000);
+    const transcript = ''; // raw text is parsed, not stored (data minimisation)
     this.q('UPDATE intakes SET data=?, transcript=?, vehicle_id=?, updated_at=? WHERE id=?').run(J.str(final), transcript, vehicleId, nowIso(), r.id);
     this.audit(tid, actor, 'intake.update', 'intake', r.id);
     return { ...this.intakeView(tid, this.intakeRow(tid, r.ref)), changed, recognised: Object.keys(parsed.fields) };

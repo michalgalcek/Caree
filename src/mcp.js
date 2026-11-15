@@ -20,7 +20,7 @@ const localDateTime = z.string().regex(/^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2})?$/).des
 export const TOOL_ANNOTATION_NOTES = {}; // filled below – used to generate the submission justification document
 
 export function buildMcpServer(svc, { baseUrl }) {
-  const server = new McpServer({ name: 'garagee', version: '1.0.0' }, { instructions: 'Garagee manages a repair shop for passenger cars (M1) and light commercial vehicles up to 3.5 t (N1): vehicles, vehicle intake (check-in), bookings, estimates, digital inspections, workshop planning and parts orders. Heavier vehicles, motorcycles, buses and trucks are out of scope. When a technician receives a car, use start_vehicle_intake with everything they said (typed or dictated), then ask only for the missing fields and call update_vehicle_intake; finish with complete_vehicle_intake. Always confirm with the user before booking, cancelling, ordering parts or erasing data. Estimates are guidance; the shop decides the final price.' });
+  const server = new McpServer({ name: 'garagee', version: '1.0.0' }, { instructions: 'Garagee manages a repair shop for passenger cars (M1) and light commercial vehicles up to 3.5 t (N1): vehicles, vehicle intake (check-in), bookings, estimates, digital inspections, workshop planning and parts orders. Heavier vehicles, motorcycles, buses and trucks are out of scope. When a technician receives a car, use start_vehicle_intake with the vehicle check-in details they gave (vehicle data, condition, customer contact and the requested work), then ask only for the missing fields and call update_vehicle_intake; finish with complete_vehicle_intake. Send only details about the vehicle being checked in – never unrelated parts of the conversation. Always confirm with the user before booking, cancelling, ordering parts or erasing data. Estimates are guidance; the shop decides the final price.' });
 
   server.registerResource('garagee-widget', WIDGET_URI, { title: 'Garagee view', mimeType: 'text/html;profile=mcp-app' }, async () => ({
     contents: [{ uri: WIDGET_URI, mimeType: 'text/html;profile=mcp-app', text: WIDGET_HTML, _meta: { ui: { prefersBorder: true, csp: { connectDomains: [], resourceDomains: [] } }, 'openai/widgetDescription': 'Shows Garagee results: free slots, estimates, workshop plan, vehicle card or job status.' } }],
@@ -295,7 +295,7 @@ export function buildMcpServer(svc, { baseUrl }) {
 
   // ---------------- vehicle intake (vstupná prehliadka) – typed or dictated
   const intakeInput = {
-    text: z.string().max(5000).optional().describe('Everything the technician typed or dictated, verbatim (any language). Garagee extracts what it can.'),
+    text: z.string().max(2000).optional().describe('The technician\'s check-in description of this vehicle (any language): plate/VIN, mileage, condition, customer contact and requested work. Only check-in details – no unrelated conversation. Used to fill the intake fields; the raw text is not stored.'),
     fields: z.object({
       plate: z.string().max(20).optional(), vin: z.string().max(25).optional(), make: z.string().max(40).optional(), model: z.string().max(60).optional(),
       year: z.number().int().min(1950).max(2100).optional(), category: z.enum(['M1', 'N1']).optional().describe('M1 passenger car, N1 van ≤ 3.5 t'),
@@ -305,12 +305,12 @@ export function buildMcpServer(svc, { baseUrl }) {
       damage: z.string().max(500).optional(), tyres: z.string().max(200).optional(), itemsInCar: z.string().max(200).optional(), keys: z.number().int().min(0).max(10).optional(),
       customerName: z.string().max(120).optional(), customerPhone: z.string().max(40).optional(), customerEmail: z.string().email().optional(),
       complaint: z.string().max(1000).optional(), customerWaiting: z.boolean().optional(), promisedBy: z.string().max(20).optional(), notes: z.string().max(1000).optional(),
-    }).optional().describe('Structured values you already understood from the conversation'),
+    }).optional().describe('Check-in values for this vehicle that you already understood. Customer contact is used only to reach the customer about this job.'),
   };
   const intakeText = (r) => `Intake ${r.ref} (${r.status}). ${r.complete ? 'All required data is filled.' : `Missing: ${r.missingLabels.join(', ')}.`}${r.recommendedLabels?.length ? ` Recommended: ${r.recommendedLabels.join(', ')}.` : ''}${r.errors?.length ? ` Problems: ${r.errors.join('; ')}.` : ''}`;
 
   tool('start_vehicle_intake', {
-    title: 'Start vehicle intake', description: 'Start the check-in (vstupná prehliadka) of a car or van ≤ 3.5 t that has just arrived: pass everything the technician said or typed. Returns what was recognised and which required fields are still missing – then ask the technician only for those. A known plate/VIN is prefilled from the database.',
+    title: 'Start vehicle intake', description: 'Start the check-in (vstupná prehliadka) of a car or van ≤ 3.5 t that has just arrived: pass the vehicle check-in details the technician gave (vehicle, condition, customer contact, requested work). Returns what was recognised and which required fields are still missing – then ask the technician only for those. A known plate/VIN is prefilled from the database.',
     input: intakeInput, annotations: WRITE, ui: true, why: 'Creates a draft intake record in the shop; nothing is sent or deleted.',
   }, async ({ text, fields }, extra) => {
     const a = ctx(extra); need(a, 'mechanic');
@@ -319,7 +319,7 @@ export function buildMcpServer(svc, { baseUrl }) {
   });
 
   tool('update_vehicle_intake', {
-    title: 'Add to vehicle intake', description: 'Add more information to a draft intake (what the technician said or typed next). Values are merged; existing values are only replaced by new non-empty ones.',
+    title: 'Add to vehicle intake', description: 'Add missing check-in details to a draft intake (only what is needed for this vehicle). Values are merged; existing values are only replaced by new non-empty ones.',
     input: { ref: z.string().describe('Intake reference, e.g. I-00001'), ...intakeInput }, annotations: OVERWRITE, ui: true, why: 'Replaces field values of an unfinished intake draft (overwrite), so it is marked destructive; nothing is sent.',
   }, async ({ ref, text, fields }, extra) => {
     const a = ctx(extra); need(a, 'mechanic');
