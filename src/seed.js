@@ -10,6 +10,8 @@ export function seedDemo(svc, { email = (process.env.DEMO_EMAIL || 'demo@garagee
   if (existing) {
     // keep the review account's password in sync with the DEMO_PASSWORD secret
     svc.db.prepare('UPDATE users SET pass_hash=? WHERE id=?').run(hashPassword(password), existing.id);
+    const tid = svc.db.prepare('SELECT tenant_id FROM users WHERE id=?').get(existing.id).tenant_id;
+    svc.setPlan(tid, 'unlimited');
     console.log(`[garagee] demo account ready: ${email} (password synced from secret, ${password.length} chars)`);
     return null;
   }
