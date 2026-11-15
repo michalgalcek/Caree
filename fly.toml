@@ -16,6 +16,7 @@ primary_region = "fra"
   DEMO_SEED = "1"
   DEMO_EMAIL = "demo@garagee.test"
   REVIEW_EMAIL = "review@garagee.test"
+  OPENAI_APPS_CHALLENGE = "pTkOq1brv_Fl_fgTJU4WcKOEw-PZcQ8eYKMI6EJOnwU"
 
 [[vm]]
   size = "shared-cpu-1x"
