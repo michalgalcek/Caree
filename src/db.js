@@ -39,6 +39,7 @@ CREATE TABLE IF NOT EXISTS oauth_tokens (token TEXT PRIMARY KEY, kind TEXT NOT N
 const MIGRATIONS = [
   ['vehicles', 'max_weight_kg', 'INTEGER'],
   ['bays', 'max_kg', 'INTEGER NOT NULL DEFAULT 3500'],
+  ['tenants', 'plan', "TEXT NOT NULL DEFAULT 'start'"],
 ];
 
 export function openDb(file = process.env.CAREE_DB || ':memory:') {

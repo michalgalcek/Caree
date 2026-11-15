@@ -77,3 +77,21 @@ test('intake parser: make/model/year, section boundaries, "kontrolky žiadne", �
   const c = parseIntakeText('škoda na laku, 120000 km', { country: 'SK' }).fields;
   assert.equal(c.make, undefined); assert.equal(c.year, undefined);
 });
+
+test('Plan limit: Start plan stops at 100 active vehicles, archived ones free a slot, intake warns early', () => {
+  const svc = new Garagee(openDb(':memory:'));
+  const { tenant } = svc.signup({ shopName: 'Limit Test', country: 'SK', email: 'limit@test.example', password: 'long-password-1' });
+  const tid = tenant.id;
+  assert.equal(svc.usage(tid).vehicleLimit, 100);
+  let last;
+  for (let i = 0; i < 100; i++) last = svc.addVehicle(tid, { plate: `ZA ${String(100 + i)}AA` }).vehicle;
+  assert.deepEqual([svc.usage(tid).vehiclesUsed, svc.usage(tid).vehiclesLeft], [100, 0]);
+  assert.throws(() => svc.addVehicle(tid, { plate: 'ZA 999XX' }), /Vehicle limit of this shop reached \(100 of 100/);
+  const draft = svc.startIntake(tid, { text: 'osobné auto ZA 998XX, 1000 km, zákazník Ján Test 0905 000 111, závada: test' });
+  assert.equal(draft.limitReached, true); assert.equal(draft.complete, false);
+  const known = svc.startIntake(tid, { text: `osobné auto ${last.plate}, 2000 km, zákazník Ján Test 0905 000 111, závada: test` });
+  assert.equal(known.limitReached, false);
+  svc.archiveVehicle(tid, last.id, { actor: 'test' });
+  assert.ok(svc.addVehicle(tid, { plate: 'ZA 999XX' }).vehicle.id);
+  svc.setPlan(tid, 'profi'); assert.equal(svc.usage(tid).vehicleLimit, 2000);
+});

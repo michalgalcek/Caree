@@ -260,7 +260,7 @@ export function buildMcpServer(svc, { baseUrl }) {
     const a = ctx(extra);
     const s = svc.settings(a.tenantId);
     const missing = [s.laborRate == null && 'labour rate', !svc.bays(a.tenantId).length && 'lifts/bays', !svc.mechanics(a.tenantId).length && 'mechanics', s.currency !== 'EUR' && s.fxFromEur == null && 'EUR exchange rate for reference part prices'].filter(Boolean);
-    return { text: `${s.countryName}, ${s.currency}, tax ${s.vatRate} %, labour ${s.laborRate ?? 'NOT SET'}/h.${missing.length ? ' Missing: ' + missing.join(', ') + '.' : ''}`, data: { settings: s, bays: svc.bays(a.tenantId), mechanics: svc.mechanics(a.tenantId), suppliers: svc.suppliers(a.tenantId).map(({ apiKey, health, ...x }) => ({ ...x, status: health?.lastError ? 'last request failed' : 'ok' })), missing } };
+    return { text: `${s.countryName}, ${s.currency}, tax ${s.vatRate} %, labour ${s.laborRate ?? 'NOT SET'}/h.${missing.length ? ' Missing: ' + missing.join(', ') + '.' : ''}`, data: { settings: s, usage: svc.usage(a.tenantId), bays: svc.bays(a.tenantId), mechanics: svc.mechanics(a.tenantId), suppliers: svc.suppliers(a.tenantId).map(({ apiKey, health, ...x }) => ({ ...x, status: health?.lastError ? 'last request failed' : 'ok' })), missing } };
   });
 
   tool('set_shop_settings', {

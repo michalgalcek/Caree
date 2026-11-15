@@ -12,6 +12,7 @@ import express from 'express';
 import { page, esc } from './html.js';
 import { strings, pickLanguage, LANGUAGES } from '../config/i18n.js';
 import { COUNTRIES } from '../config/countries.js';
+import { PLANS } from '../config/plans.js';
 import { formatMoney } from '../core/estimator.js';
 import { privacyPage, termsPage, dpaPage, supportPage } from './legal.js';
 import { tabletPage, SERVICE_WORKER } from './tablet.js';
@@ -23,7 +24,7 @@ export function publicRouter(svc, { baseUrl, provider }) {
   r.get('/', (req, res) => res.type('html').send(page('Garagee – AI workshop assistant', `
     <h1 translate="no">Garagee</h1><p>The AI workshop assistant for repair shops servicing passenger cars and vans up to 3.5 t – vehicle intake by voice, bookings, estimates, digital inspections, workshop planning and parts ordering, right inside ChatGPT.</p>
     <p class="muted">Available in ${LANGUAGES.length} languages with country rules for Slovakia, Czechia, Germany, Austria, Poland, Hungary, France, Italy, Spain, the Netherlands, Belgium, the UK, the US, Canada and Australia.</p>
-    <p><a href="/signup"><b>Create your shop</b></a> · <a href="/app">Workshop tablet</a></p>
+    <p><a href="/signup"><b>Create your shop</b></a> · <a href="/app">Workshop tablet</a> · <a href="/plans">Plans</a></p>
     <p><a href="/privacy">Privacy</a> · <a href="/terms">Terms</a> · <a href="/dpa">DPA</a> · <a href="/support">Support</a></p>`)));
 
   // ---- self-service sign-up of a shop (owner account) ----
@@ -63,6 +64,29 @@ export function publicRouter(svc, { baseUrl, provider }) {
     } catch (e) {
       res.status(400).type('html').send(signupForm(b, e.message || 'Sign-up failed.'));
     }
+  });
+
+
+  // ---- plans (website only; never shown or linked inside ChatGPT) ----
+  r.get('/plans', (_q, res) => {
+    const lim = (v) => v == null ? 'unlimited' : v.toLocaleString('en');
+    res.type('html').send(page('Plans – Garagee', `
+    <h1>Garagee plans</h1>
+    <p class="muted">Every shop starts on <b>Start</b>. The same limits apply in ChatGPT, on the workshop tablet and on the web. Existing vehicles always keep working; at the limit only adding new vehicles is paused.</p>
+    <table><tr><th></th><th>Start</th><th>Profi</th><th>Workshop+</th></tr>
+      <tr><td>Active vehicles</td><td>${lim(PLANS.start.vehicles)}</td><td>${lim(PLANS.profi.vehicles)}</td><td>${lim(PLANS.workshop.vehicles)}</td></tr>
+      <tr><td>Users</td><td>1</td><td>up to 5</td><td>unlimited, several locations</td></tr>
+      <tr><td>Vehicle intake (typing or voice), estimates, free slots, bookings, workshop plan</td><td>✓</td><td>✓</td><td>✓</td></tr>
+      <tr><td>Workshop tablet with offline mode</td><td>✓</td><td>✓</td><td>✓</td></tr>
+      <tr><td>Digital inspection and customer approval link</td><td>✓</td><td>✓</td><td>✓</td></tr>
+      <tr><td>Parts orders</td><td>by e-mail</td><td>by e-mail; supplier systems – planned</td><td>by e-mail; supplier systems – planned</td></tr>
+      <tr><td>Service and inspection reminders to customers (SMS / e-mail)</td><td>–</td><td>planned</td><td>planned</td></tr>
+      <tr><td>Invoicing and accounting export</td><td>–</td><td>planned</td><td>planned</td></tr>
+      <tr><td>Model-specific labour times</td><td>catalogue</td><td>catalogue</td><td>planned</td></tr>
+      <tr><td>Data import from your previous system</td><td>–</td><td>✓ (on request)</td><td>✓ (on request)</td></tr>
+      <tr><td>Support</td><td>e-mail</td><td>priority e-mail</td><td>phone</td></tr>
+    </table>
+    <p>Profi and Workshop+ are arranged directly with housee s.r.o. – write to <a href="/support">support</a>.</p>`));
   });
 
   // ---- account deletion by the shop owner ----

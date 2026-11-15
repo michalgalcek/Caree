@@ -14,6 +14,7 @@ export function seedDemo(svc, { email = (process.env.DEMO_EMAIL || 'demo@garagee
     return null;
   }
   const t = svc.createTenant({ name: { SK: 'Demo Autoservis', CZ: 'Demo Autoservis', DE: 'Demo Autowerkstatt', AT: 'Demo Autowerkstatt' }[country] || 'Demo Garage', country, settings: { laborRate: 48, ...(country === 'GB' ? { fxFromEur: 0.85 } : {}), /* demo only: EUR→GBP for reference part prices (mid-market ≈0.85 in Nov 2026); a real shop sets its own */ opening: { mon: [7, 16], tue: [7, 16], wed: [7, 16], thu: [7, 16], fri: [7, 15] } } });
+  svc.setPlan(t.id, 'unlimited'); // demo and reviewer shops never hit plan limits
   svc.createUser(t.id, { email, password, role: 'owner', name: 'Demo Owner' });
   const BAYS = { SK: ['Zdvihák 1', 'Zdvihák 2', 'Pneuservis'], CZ: ['Zvedák 1', 'Zvedák 2', 'Pneuservis'], DE: ['Hebebühne 1', 'Hebebühne 2', 'Reifenplatz'], AT: ['Hebebühne 1', 'Hebebühne 2', 'Reifenplatz'], PL: ['Podnośnik 1', 'Podnośnik 2', 'Wulkanizacja'], HU: ['Emelő 1', 'Emelő 2', 'Gumiszerviz'] }[country] || ['Lift 1', 'Lift 2', 'Tyre bay'];
   svc.addBay(t.id, { name: BAYS[0], type: 'lift' });

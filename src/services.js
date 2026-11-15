@@ -3,6 +3,7 @@ import { randomBytes, scryptSync, timingSafeEqual } from 'node:crypto';
 import { id, nowIso, J } from './db.js';
 import { effectiveSettings, getCountry, COUNTRIES } from './config/countries.js';
 import { decodeVin, normalizeVin } from './core/vin.js';
+import { planOf, PLANS } from './config/plans.js';
 import { nextInspection, maintenanceDue } from './core/inspection.js';
 import { estimate, lookupOperation, OPERATIONS } from './core/estimator.js';
 import { Workshop, prioritise } from './core/scheduler.js';
@@ -43,7 +44,7 @@ export class Garagee {
   createTenant({ name, country, settings = {} }) {
     if (!name || !country) throw new Invalid('name and country required');
     const t = { id: id(), name, country: country.toUpperCase(), settings: J.str(settings), public_slug: slug(name) + '-' + randomBytes(3).toString('hex'), created_at: nowIso() };
-    this.q('INSERT INTO tenants VALUES (?,?,?,?,?,?)').run(t.id, t.name, t.country, t.settings, t.public_slug, t.created_at);
+    this.q('INSERT INTO tenants (id,name,country,settings,public_slug,created_at) VALUES (?,?,?,?,?,?)').run(t.id, t.name, t.country, t.settings, t.public_slug, t.created_at);
     return this.tenant(t.id);
   }
   tenant(tid) { const r = rowTenant(this.q('SELECT * FROM tenants WHERE id=?').get(tid)); if (!r) throw new NotFound('shop not found'); return r; }
@@ -136,6 +137,14 @@ export class Garagee {
     if (!c) throw new NotFound('customer not found');
     return { id: c.id, name: c.name, phone: c.phone, email: c.email, language: c.language, marketingConsent: !!c.marketing_consent, anonymized: !!c.anonymized_at };
   }
+  /** Plan and vehicle usage of a shop. Archived vehicles do not count. */
+  usage(tid) {
+    const p = planOf(this.tenant(tid).plan);
+    const used = this.q('SELECT COUNT(*) n FROM vehicles WHERE tenant_id=? AND archived=0').get(tid).n;
+    return { plan: p.code, planName: p.name, vehiclesUsed: used, vehicleLimit: p.vehicles, vehiclesLeft: p.vehicles == null ? null : Math.max(0, p.vehicles - used) };
+  }
+  canAddVehicle(tid) { const u = this.usage(tid); return u.vehicleLimit == null || u.vehiclesUsed < u.vehicleLimit; }
+  setPlan(tid, plan) { if (!PLANS[plan]) throw new Invalid('unknown plan'); this.q('UPDATE tenants SET plan=? WHERE id=?').run(plan, tid); this.audit(tid, 'admin', 'plan.change'); return this.usage(tid); }
   addVehicle(tid, { customerId = null, vin = null, plate = null, make = null, model = null, engine = null, year = null, fuel = null, category = 'M1', maxWeightKg = null, firstRegistration = null, lastInspection = null, mileage = null }) {
     category = String(category || 'M1').toUpperCase();
     if (!['M1', 'N1'].includes(category)) throw new Invalid('Garagee is for passenger cars (M1) and light commercial vehicles up to 3.5 t (N1) only.');
@@ -149,6 +158,7 @@ export class Garagee {
       year = year || decoded.modelYear;
     }
     if (!vin && !plate) throw new Invalid('VIN or licence plate required');
+    if (!this.canAddVehicle(tid)) { const u = this.usage(tid); throw new Invalid(`Vehicle limit of this shop reached (${u.vehiclesUsed} of ${u.vehicleLimit} vehicles). Existing vehicles keep working. To add another one, archive or erase vehicles that are no longer serviced, or ask the shop owner.`); }
     const v = { id: id() };
     const today = nowIso().slice(0, 10);
     this.q(`INSERT INTO vehicles (id,tenant_id,customer_id,vin,plate,make,model,engine,year,fuel,category,first_registration,last_inspection,mileage,mileage_date,created_at,max_weight_kg)
@@ -469,8 +479,10 @@ export class Garagee {
     const data = J.parse(r.data, {});
     const st = intakeStatus(data);
     const L = intakeLabels(this.settings(tid).language);
+    const limitReached = r.status === 'draft' && !r.vehicle_id && !this.canAddVehicle(tid);
+    if (limitReached) { st.errors = [...st.errors, 'Vehicle limit of this shop reached – this new vehicle cannot be saved until vehicles that are no longer serviced are archived or erased.']; st.complete = false; }
     return {
-      ref: r.ref, status: r.status, data, ...st,
+      ref: r.ref, status: r.status, data, ...st, limitReached,
       missingLabels: st.missing.map((k) => L[k]), recommendedLabels: st.recommended.map((k) => L[k]),
       labels: L, vehicleId: r.vehicle_id, customerId: r.customer_id, jobRef: r.job_id ? this.q('SELECT ref FROM jobs WHERE id=?').get(r.job_id)?.ref : null,
     };
