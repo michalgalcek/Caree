@@ -52,7 +52,7 @@ export function termsPage() {
 <h1>Terms of service</h1><p class="muted">Last updated ${esc(c.updated)}</p>
 <p>These terms govern the use of Garagee, operated by ${esc(c.name)}, ${esc(c.address)}, company ID ${esc(c.regNo)}.</p>
 <h2>Plans and limits</h2>
-<p>New shops start on the Start plan with up to 250 active (not archived) vehicles. Vehicles already stored always remain usable; when the limit is reached only adding new vehicles is paused. Other plans are agreed directly with housee s.r.o.; their limits are listed at <a href="/plans">/plans</a> and apply equally in ChatGPT, on the tablet and on the web.</p>
+<p>New shops start on the Start plan with up to 1,000 active (not archived) vehicles. Vehicles already stored always remain usable; when the limit is reached only adding new vehicles is paused. Other plans are agreed directly with housee s.r.o.; their limits are listed at <a href="/plans">/plans</a> and apply equally in ChatGPT, on the tablet and on the web.</p>
 <h2>1. Service</h2><p>Garagee helps repair shops for passenger cars (M1) and light commercial vehicles up to 3.5 t (N1) manage vehicle intake, vehicles, bookings, estimates, inspections, planning and parts orders. Drivers can request bookings and approve or decline recommended work.</p>
 <h2>2. Estimates and AI suggestions</h2><p>Time and price estimates, inspection due dates and diagnostic suggestions are <b>guidance</b>. The repair shop is responsible for the final diagnosis, price and work. Statutory inspection dates must be checked against the vehicle documents. No work is added to a job without the driver's approval through the shop.</p>
 <h2>3. Accounts</h2><p>Shop accounts are for businesses. Keep sign-in details confidential. The shop is responsible for its staff's use.</p>

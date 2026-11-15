@@ -1,7 +1,7 @@
 // Shop plans. Limits apply identically in ChatGPT, on the tablet and on the web (feature parity).
 // Plans are sold and changed only on the Garagee website – never inside ChatGPT.
 export const PLANS = {
-  start: { name: 'Start', vehicles: 250, users: 1 },
+  start: { name: 'Start', vehicles: 1000, users: 1 },
   profi: { name: 'Profi', vehicles: 2000, users: 5 },
   workshop: { name: 'Workshop+', vehicles: null, users: null },
   unlimited: { name: 'Unlimited (internal / review)', vehicles: null, users: null },
