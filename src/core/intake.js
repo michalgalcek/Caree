@@ -165,7 +165,7 @@ export function parseIntakeText(raw, { country = 'SK' } = {}) {
   const fl = lower.match(/(?:n[aá]dr[zž]\w*|palivo|paliw\w*|üzemanyag\w*|fuel|tank|nabitie|nabit[ií]|battery|charge|bat[eé]ri\w*|r[eé]servoir|carburant|serbatoio|dep[oó]sito|brandstof)\D{0,10}(\d\/\d|\d{1,3}\s*%|pln[aá]|full|voll|pe[lł]n\w*|plein|pieno|lleno|vol|pr[aá]zdn\w*|empty|leer|pust\w*|vide|vuoto|vac[ií]o|leeg|pol\w*|half|halb\w*|p[oó][lł]|moiti[eé]|met[aà]|medio|rezerv\w*|reserve|r[eé]serve|riserva)/);
   if (fl) {
     const v = fl[1];
-    fields.fuelLevel = /pln|full|voll|pe[lł]n|plein|pieno|lleno|^vol$/.test(v) ? '4/4' : /pr[aá]zd|empty|leer|pust|vide|vuoto|vac|leeg|rezerv|reserve|r[eé]serve|riserva/.test(v) ? '0/4 (reserve)' : /pol|half|halb|p[oó][lł]|moiti|met[aà]|medio/.test(v) ? '2/4' : v.replace(/\s+/g, '');
+    fields.fuelLevel = normFuelLevel(v);
   }
 
   const yr = lower.match(/(?:rok|year|r\.\s?v\.|baujahr|rocznik|évjárat|ann[eé]e|anno|a[nñ]o|bouwjaar)\D{0,6}((?:19|20)\d{2})/)
@@ -224,6 +224,17 @@ export function parseIntakeText(raw, { country = 'SK' } = {}) {
 }
 
 /** Merge new values; never overwrite a value with empty. Returns changed keys. */
+/** "half tank", "plná", "voll", "50 %" … → '2/4', '4/4', '50%'; other text is kept as given. */
+export function normFuelLevel(raw) {
+  const v = String(raw).toLowerCase().trim();
+  if (/^\d\/\d$/.test(v) || /^\d{1,3}\s*%$/.test(v)) return v.replace(/\s+/g, '');
+  if (/pln|full|voll|pe[lł]n|plein|pieno|lleno|^vol\b/.test(v)) return '4/4';
+  if (/pr[aá]zd|empty|leer|pust|vide|vuoto|vac[ií]|leeg|rezerv|reserve|r[eé]serve|riserva/.test(v)) return '0/4 (reserve)';
+  if (/\bpol|half|halb|p[oó][lł]|moiti|met[aà]|medio|helft/.test(v)) return '2/4';
+  if (/quarter|štvrt|ctvrt|čtvrt|viertel|ćwier/.test(v)) return /three|3|tri|dreiv/.test(v) ? '3/4' : '1/4';
+  return String(raw).trim();
+}
+
 export function mergeIntake(current, incoming) {
   const out = { ...current };
   const changed = [];
@@ -235,6 +246,7 @@ export function mergeIntake(current, incoming) {
     if (f.key === 'fuel') v = String(v).toUpperCase();
     if (f.key === 'mileage' || f.key === 'maxWeightKg') v = Number(String(v).replace(/[^\d]/g, ''));
     if (f.key === 'category') v = String(v).toUpperCase();
+    if (f.key === 'fuelLevel') v = normFuelLevel(v);
     if (out[f.key] !== v) { out[f.key] = v; changed.push(f.key); }
   }
   return { data: out, changed };
