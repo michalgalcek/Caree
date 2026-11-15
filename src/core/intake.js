@@ -1,5 +1,5 @@
 // Vehicle intake ("vstupná prehliadka"): the technician registers a newly received car while walking around it –
-// by typing or by voice. Works incrementally: every call adds what was said, Caree answers what is still missing.
+// by typing or by voice. Works incrementally: every call adds what was said, Garagee answers what is still missing.
 import { decodeVin, normalizeVin } from './vin.js';
 
 /** Field schema. required = must be filled before the intake can be completed. */
@@ -244,8 +244,8 @@ export function intakeStatus(data) {
     if (f.required === true && (data[f.key] === undefined || data[f.key] === '')) missing.push(f.key);
     if (f.recommended && (data[f.key] === undefined || data[f.key] === '')) recommended.push(f.key);
   }
-  if (data.category && !['M1', 'N1'].includes(data.category)) errors.push('category: Caree is for passenger cars (M1) and light commercial vehicles up to 3.5 t (N1) only');
-  if (data.maxWeightKg != null && data.maxWeightKg > MAX_WEIGHT_KG) errors.push(`maxWeightKg: ${data.maxWeightKg} kg is over 3,500 kg – Caree is for vehicles up to 3.5 t only`);
+  if (data.category && !['M1', 'N1'].includes(data.category)) errors.push('category: Garagee is for passenger cars (M1) and light commercial vehicles up to 3.5 t (N1) only');
+  if (data.maxWeightKg != null && data.maxWeightKg > MAX_WEIGHT_KG) errors.push(`maxWeightKg: ${data.maxWeightKg} kg is over 3,500 kg – Garagee is for vehicles up to 3.5 t only`);
   if (data.vin) { const d = decodeVin(data.vin); if (!d.valid) errors.push(`vin: ${d.errors.join(' ')}`); }
   if (data.mileage != null && !(data.mileage > 0 && data.mileage < 3000000)) errors.push('mileage: not a plausible value');
   if (data.fuel && !INTAKE_FIELDS.find((f) => f.key === 'fuel').enum.includes(data.fuel)) errors.push('fuel: use PETROL, DIESEL, LPG, CNG, HYBRID or EV');

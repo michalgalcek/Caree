@@ -1,5 +1,5 @@
 // OAuth 2.1 authorization server for ChatGPT (authorization code + PKCE, dynamic client registration).
-// Built on the MCP SDK router; Caree supplies storage and the login screen.
+// Built on the MCP SDK router; Garagee supplies storage and the login screen.
 import { randomBytes, createHash } from 'node:crypto';
 import { J, nowIso } from './db.js';
 import { esc, page } from './web/html.js';
@@ -13,7 +13,7 @@ const sha = (s) => createHash('sha256').update(s).digest('hex');
 const tok = () => randomBytes(32).toString('base64url');
 const nowS = () => Math.floor(Date.now() / 1000);
 
-export class CareeOAuthProvider {
+export class GarageeOAuthProvider {
   constructor(db, svc) {
     this.db = db; this.svc = svc;
     // Pending authorization requests and login failures live in the database, so a restart or deploy
@@ -39,7 +39,7 @@ export class CareeOAuthProvider {
     const { rid, email = '', password = '' } = req.body || {};
     const row = this.db.prepare('SELECT * FROM oauth_pending WHERE rid=?').get(sha(String(rid || '')));
     const p = row && row.expires_at >= nowS() ? J.parse(row.data) : null;
-    if (!p) return res.status(400).type('html').send(page('Caree', '<p>This sign-in link expired. Go back to ChatGPT and connect again.</p>'));
+    if (!p) return res.status(400).type('html').send(page('Garagee', '<p>This sign-in link expired. Go back to ChatGPT and connect again.</p>'));
     const check = this.checkLogin(email, password);
     if (check.error) return res.status(check.status).type('html').send(loginPage(rid, p.clientName, check.error));
     const user = check.user;
@@ -108,8 +108,8 @@ export class CareeOAuthProvider {
 }
 
 function loginPage(rid, clientName, error = '') {
-  return page('Sign in to Caree', `
-  <h1>Sign in to Caree</h1>
+  return page('Sign in to Garagee', `
+  <h1>Sign in to Garagee</h1>
   <p class="muted">${esc(clientName || 'ChatGPT')} wants to access your workshop: vehicles, bookings, estimates and parts orders. You can disconnect at any time in ChatGPT settings.</p>
   ${error ? `<p class="err">${esc(error)}</p>` : ''}
   <form method="post" action="/oauth/login">
@@ -118,5 +118,5 @@ function loginPage(rid, clientName, error = '') {
     <label>Password<input name="password" type="password" autocomplete="current-password" required></label>
     <button type="submit">Sign in</button>
   </form>
-  <p class="muted small">Caree is operated by housee s.r.o. <a href="/privacy">Privacy</a> · <a href="/terms">Terms</a></p>`);
+  <p class="muted small">Garagee is operated by housee s.r.o. <a href="/privacy">Privacy</a> · <a href="/terms">Terms</a></p>`);
 }

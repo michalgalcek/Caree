@@ -13,8 +13,8 @@ primary_region = "fra"
   SUPPORT_EMAIL = "housee@housee.sk"
   PRIVACY_EMAIL = "housee@housee.sk"
   DEMO_SEED = "1"
-  DEMO_EMAIL = "demo@caree.test"
-  REVIEW_EMAIL = "review@caree.housee.sk"
+  DEMO_EMAIL = "demo@garagee.test"
+  REVIEW_EMAIL = "review@garagee.test"
 
 [[vm]]
   size = "shared-cpu-1x"

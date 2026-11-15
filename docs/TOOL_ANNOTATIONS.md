@@ -14,7 +14,7 @@ Generated from the code (`npm run annotations`). Every tool sets all three hints
 | `estimate_job` | Estimate job | true | false | false | Calculation only; nothing is stored. |
 | `find_free_slots` | Find free slots | true | false | false | Reads the schedule; does not reserve anything. |
 | `book_appointment` | Book appointment | false | false | false | Creates a booking inside the shop; reversible with reschedule/cancel; nothing is sent to anyone. |
-| `reschedule_appointment` | Reschedule appointment | false | false | false | Changes the time of a booking; can be changed back; nothing is deleted or sent. |
+| `reschedule_appointment` | Reschedule appointment | false | true | false | Replaces the booked time of an existing job (overwrite), so it is marked destructive; nothing is sent. |
 | `cancel_appointment` | Cancel appointment | false | true | false | Cancellation frees the slot and cannot be undone automatically. |
 | `job_status` | Job status | true | false | false | Reads data of the signed-in shop. |
 | `record_inspection` | Record inspection findings | false | false | false | Adds findings to a job; nothing is sent to the customer. |
@@ -24,10 +24,10 @@ Generated from the code (`npm run annotations`). Every tool sets all three hints
 | `plan_workshop` | Workshop plan | true | false | false | Reads the schedule. |
 | `booking_requests` | New booking requests | true | false | false | Reads data of the signed-in shop. |
 | `get_shop_settings` | Shop settings | true | false | false | Reads configuration. |
-| `set_shop_settings` | Change shop settings | false | false | false | Updates configuration of the signed-in shop; old values can be set back. |
+| `set_shop_settings` | Change shop settings | false | true | false | Replaces existing shop settings values (overwrite), so it is marked destructive; nothing is sent. |
 | `setup_workshop` | Add lifts, mechanics, suppliers | false | false | false | Adds configuration records; nothing is deleted. |
 | `start_vehicle_intake` | Start vehicle intake | false | false | false | Creates a draft intake record in the shop; nothing is sent or deleted. |
-| `update_vehicle_intake` | Add to vehicle intake | false | false | false | Updates a draft intake record; reversible, nothing is sent. |
+| `update_vehicle_intake` | Add to vehicle intake | false | true | false | Replaces field values of an unfinished intake draft (overwrite), so it is marked destructive; nothing is sent. |
 | `complete_vehicle_intake` | Complete vehicle intake | false | false | false | Creates customer, vehicle and job records in the shop; nothing is sent or deleted. |
 | `list_open_intakes` | Open intakes | true | false | false | Reads data of the signed-in shop. |
 | `export_customer_data` | Export customer data | true | false | false | Reads data; the export is shown only to the signed-in shop user. |

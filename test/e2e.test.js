@@ -42,9 +42,9 @@ test('OAuth: metadata, dynamic registration, PKCE login, token', async () => {
   Object.entries({ response_type: 'code', client_id: reg.client_id, redirect_uri: reg.redirect_uris[0], code_challenge: challenge, code_challenge_method: 'S256', state: 'xyz', scope: 'workshop', resource: base + '/mcp' }).forEach(([k, v]) => au.searchParams.set(k, v));
   const page = await (await fetch(au)).text();
   const rid = page.match(/name="rid" value="([^"]+)"/)[1];
-  const bad = await fetch(base + '/oauth/login', { method: 'POST', redirect: 'manual', body: new URLSearchParams({ rid, email: 'demo@caree.test', password: 'wrong-password' }) });
+  const bad = await fetch(base + '/oauth/login', { method: 'POST', redirect: 'manual', body: new URLSearchParams({ rid, email: 'demo@garagee.test', password: 'wrong-password' }) });
   assert.equal(bad.status, 401);
-  const login = await fetch(base + '/oauth/login', { method: 'POST', redirect: 'manual', body: new URLSearchParams({ rid, email: 'demo@caree.test', password: 'demo-password-123' }) });
+  const login = await fetch(base + '/oauth/login', { method: 'POST', redirect: 'manual', body: new URLSearchParams({ rid, email: 'demo@garagee.test', password: 'demo-password-123' }) });
   assert.equal(login.status, 302);
   const loc = new URL(login.headers.get('location'));
   assert.equal(loc.searchParams.get('state'), 'xyz');
@@ -59,13 +59,13 @@ test('OAuth: metadata, dynamic registration, PKCE login, token', async () => {
 
 test('MCP: tools listed with explicit annotations and UI template', async () => {
   const init = await mcp('initialize', { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 't', version: '1' } });
-  assert.ok(init.result.serverInfo.name === 'caree');
+  assert.ok(init.result.serverInfo.name === 'garagee');
   const { result } = await mcp('tools/list', {});
   assert.ok(result.tools.length >= 20);
   for (const t of result.tools) for (const k of ['readOnlyHint', 'destructiveHint', 'openWorldHint']) assert.equal(typeof t.annotations[k], 'boolean', `${t.name}.${k}`);
   const slots = result.tools.find((t) => t.name === 'find_free_slots');
-  assert.equal(slots._meta.ui.resourceUri, 'ui://caree/widget-v2.html');
-  const res = await mcp('resources/read', { uri: 'ui://caree/widget-v2.html' });
+  assert.equal(slots._meta.ui.resourceUri, 'ui://garagee/widget-v3.html');
+  const res = await mcp('resources/read', { uri: 'ui://garagee/widget-v3.html' });
   assert.equal(res.result.contents[0].mimeType, 'text/html;profile=mcp-app');
 });
 
@@ -132,7 +132,7 @@ test('Public booking page, legal pages, offline sync', async () => {
   const post = await fetch(`${base}/b/${slug}`, { method: 'POST', body: new URLSearchParams({ name: 'Max', phone: '+49 1', service: 'Ölwechsel', consent: '1', language: 'de' }) });
   assert.equal(post.status, 200);
   for (const p of ['/privacy', '/terms', '/dpa', '/support']) assert.equal((await fetch(base + p)).status, 200, p);
-  const login = await (await fetch(base + '/api/app/login', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ email: 'demo@caree.test', password: 'demo-password-123' }) })).json();
+  const login = await (await fetch(base + '/api/app/login', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ email: 'demo@garagee.test', password: 'demo-password-123' }) })).json();
   const auth = { authorization: 'Bearer ' + login.access_token, 'content-type': 'application/json' };
   const job = tenantSvc.q(`SELECT jt.id FROM job_tasks jt JOIN jobs j ON j.id=jt.job_id WHERE j.ref='J-00001' LIMIT 1`).get();
   const op = { clientOpId: 'op-1', type: 'clock', taskId: job.id, actualHours: 0.7, done: true };
@@ -167,7 +167,7 @@ test('MCP: vehicle intake by dictation, asks only for missing, completes into qu
 });
 
 test('Tablet: dictation parse endpoint and offline intake sync', async () => {
-  const login = await (await fetch(base + '/api/app/login', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ email: 'demo@caree.test', password: 'demo-password-123' }) })).json();
+  const login = await (await fetch(base + '/api/app/login', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ email: 'demo@garagee.test', password: 'demo-password-123' }) })).json();
   const auth = { authorization: 'Bearer ' + login.access_token, 'content-type': 'application/json' };
   const p = await (await fetch(base + '/api/app/intake/parse', { method: 'POST', headers: auth, body: JSON.stringify({ text: 'NR 555BB osobné, 12 000 km' }) })).json();
   assert.equal(p.fields.plate, 'NR 555BB'); assert.equal(p.fields.mileage, 12000);
@@ -181,7 +181,7 @@ test('Tablet: dictation parse endpoint and offline intake sync', async () => {
 test('OAuth sign-in survives a server restart between authorize and login', async () => {
   const fs = await import('node:fs');
   const net = await import('node:net');
-  const file = `/tmp/caree-restart-${Date.now()}.db`;
+  const file = `/tmp/garagee-restart-${Date.now()}.db`;
   const port = await new Promise((res) => { const s = net.createServer().listen(0, () => { const p = s.address().port; s.close(() => res(p)); }); });
   const b = `http://localhost:${port}`;
   let a1 = createApp({ db: openDb(file), baseUrl: b, seed: true });
@@ -193,9 +193,39 @@ test('OAuth sign-in survives a server restart between authorize and login', asyn
   srv1.closeAllConnections(); await new Promise((r) => srv1.close(r));
   const a2 = createApp({ db: openDb(file), baseUrl: b, seed: true });
   const srv2 = await new Promise((r) => { const s = a2.app.listen(port, () => r(s)); });
-  const post = () => fetch(b + '/oauth/login', { method: 'POST', redirect: 'manual', headers: { connection: 'close' }, body: new URLSearchParams({ rid, email: 'demo@caree.test', password: 'demo-password-123' }) });
+  const post = () => fetch(b + '/oauth/login', { method: 'POST', redirect: 'manual', headers: { connection: 'close' }, body: new URLSearchParams({ rid, email: 'demo@garagee.test', password: 'demo-password-123' }) });
   const login = await post().catch(post); // the client may reuse a socket of the stopped server once
   srv2.closeAllConnections(); await new Promise((r) => srv2.close(r));
   for (const f of [file, file + '-wal', file + '-shm']) fs.rmSync(f, { force: true });
   assert.equal(login.status, 302);
+});
+
+test('Web: shop sign-up, duplicate e-mail, owner deletes shop with all data', async () => {
+  const post = (path, data) => fetch(base + path, { method: 'POST', body: new URLSearchParams(data) });
+  const ok = await post('/signup', { shopName: 'Test Garage', country: 'AT', ownerName: 'Max', email: 'owner@test.example', password: 'long-password-1', accept: '1' });
+  assert.equal(ok.status, 200); assert.match(await ok.text(), /Your shop is ready/);
+  const dup = await post('/signup', { shopName: 'X', country: 'AT', email: 'owner@test.example', password: 'long-password-1', accept: '1' });
+  assert.equal(dup.status, 400);
+  const noAccept = await post('/signup', { shopName: 'Y', country: 'SK', email: 'y@test.example', password: 'long-password-1' });
+  assert.equal(noAccept.status, 400);
+  const u = tenantSvc.login('owner@test.example', 'long-password-1');
+  assert.ok(u); assert.equal(tenantSvc.settings(u.tenantId).currency, 'EUR');
+  tenantSvc.addCustomer(u.tenantId, { name: 'Anna', phone: '+43 660 1234567' });
+  const wrong = await post('/account/delete', { email: 'owner@test.example', password: 'nope-nope-nope', confirm: 'DELETE' });
+  assert.equal(wrong.status, 401);
+  const del = await post('/account/delete', { email: 'owner@test.example', password: 'long-password-1', confirm: 'DELETE' });
+  assert.equal(del.status, 200);
+  assert.equal(tenantSvc.login('owner@test.example', 'long-password-1'), null);
+  assert.equal(tenantSvc.db.prepare('SELECT COUNT(*) n FROM customers WHERE tenant_id=?').get(u.tenantId).n, 0);
+});
+
+test('Legacy host redirects browsers to the canonical host', async () => {
+  process.env.LEGACY_HOSTS = 'old.example';
+  const { app } = createApp({ db: openDb(':memory:'), baseUrl: 'https://new.example' });
+  delete process.env.LEGACY_HOSTS;
+  const s = await new Promise((r) => { const x = app.listen(0, () => r(x)); });
+  const http = await import('node:http');
+  const res = await new Promise((r) => http.get({ port: s.address().port, path: '/privacy?x=1', headers: { host: 'old.example' } }, r));
+  res.resume(); s.closeAllConnections(); s.close();
+  assert.equal(res.statusCode, 301); assert.equal(res.headers.location, 'https://new.example/privacy?x=1');
 });

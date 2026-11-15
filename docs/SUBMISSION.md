@@ -1,21 +1,21 @@
-# Caree – OpenAI submission kit
+# Garagee – OpenAI submission kit
 
 Since 2026 ChatGPT apps are submitted and published **as plugins** in the plugin portal (platform.openai.com/plugins → "Upload new or existing plugin" → *With MCP*).
 Sources: developers.openai.com/plugins/deploy/submission, developers.openai.com/apps-sdk/app-guidelines (checked 15 Nov 2026).
 
 ## 0. Package
-- `plugin/caree/plugin.json` – listing (name, descriptions, URLs, logo, starter prompts), 5 positive + 3 negative test cases, countries, translations (sk, cs, de, pl, hu).
-- `plugin/caree/mcp.json` – one remote server `https://caree.housee.sk/mcp` (streamable HTTP; OAuth discovered from the server, dynamic client registration, no client secret, no headers).
-- `plugin/caree/assets/logo.png`, `logo-dark.png` – 512×512.
-- Build the ZIP: `cd plugin && zip -r ../caree-plugin.zip caree -x 'caree/screenshots/*' 'caree/assets/*.svg'`
-- `plugin/caree/screenshots/` – 706 px wide widget screenshots (English review shop) in case the form asks for them; not part of the ZIP.
+- `plugin/garagee/plugin.json` – listing (name, descriptions, URLs, logo, starter prompts), 5 positive + 3 negative test cases, countries, translations (sk, cs, de, pl, hu).
+- `plugin/garagee/mcp.json` – one remote server `https://garagee.housee.sk/mcp` (streamable HTTP; OAuth discovered from the server, dynamic client registration, no client secret, no headers).
+- `plugin/garagee/assets/logo.png`, `logo-dark.png` – 512×512.
+- Build the ZIP: `cd plugin && zip -r ../garagee-plugin.zip garagee -x 'garagee/screenshots/*' 'garagee/assets/*.svg'`
+- `plugin/garagee/screenshots/` – 706 px wide widget screenshots (English review shop) in case the form asks for them; not part of the ZIP.
 - **Before upload:** replace `demo_recording_url` with a public video (YouTube unlisted / Loom) of the app working in ChatGPT; pick the final `category` in the dashboard.
 
 ## A. Account & domain
-- [ ] OpenAI organisation uses **global** data residency (reported by developers to block submission otherwise – verify in the form). Caree's own data stays in the EU (Fly.io `fra`).
+- [ ] OpenAI organisation uses **global** data residency (reported by developers to block submission otherwise – verify in the form). Garagee's own data stays in the EU (Fly.io `fra`).
 - [ ] Submitter is an organisation owner or has "Apps Management Write".
 - [ ] Organisation / developer verification completed in the OpenAI Platform.
-- [ ] App deployed at `PUBLIC_URL` with HTTPS (e.g. `https://caree.housee.sk`), MCP endpoint `PUBLIC_URL/mcp`.
+- [ ] App deployed at `PUBLIC_URL` with HTTPS (e.g. `https://garagee.housee.sk`), MCP endpoint `PUBLIC_URL/mcp`.
 - [ ] Domain verification: put the token from the form into `OPENAI_APPS_CHALLENGE`, deploy, check `PUBLIC_URL/.well-known/openai-apps-challenge`, click Verify.
 
 ## B. Public URLs (live pages, not PDFs)
@@ -28,7 +28,7 @@ Sources: developers.openai.com/plugins/deploy/submission, developers.openai.com/
 
 ## C. Assets
 - [x] Logo: square PNG 512×512 (min 48×48, max 5 MiB), light + dark
-- [x] Screenshots 706 × 400–860 px, widget only (`plugin/caree/screenshots/`)
+- [x] Screenshots 706 × 400–860 px, widget only (`plugin/garagee/screenshots/`)
 - [ ] Video walkthrough (`demo_recording_url`): connect → vehicle intake by voice/text → complete → estimate → free slots → book
 
 ## D. Authentication & review account
@@ -36,8 +36,8 @@ Sources: developers.openai.com/plugins/deploy/submission, developers.openai.com/
 - Reviewer account (English, UK shop "Demo Garage"): `REVIEW_EMAIL` (fly.toml) + secret `REVIEW_PASSWORD` (≥10 chars, set with `fly secrets set` or the Fly dashboard). Enter e-mail and password only in the portal's **Review details** – never in the ZIP. Same data as the Slovak demo: 3 lifts, 3 mechanics, 3 suppliers, 2 vehicles, 1 job with inspection findings. No sign-up, no 2FA.
 - Slovak demo shop for our own tests: `DEMO_EMAIL` + secret `DEMO_PASSWORD`.
 
-## E. Policy compliance (how Caree meets it)
-| Requirement | Caree |
+## E. Policy compliance (how Garagee meets it)
+| Requirement | Garagee |
 |---|---|
 | Minimum data | Only data needed for workshop work; no chat history requested; no precise location |
 | Restricted data | No payment cards, government IDs, health data, passwords of other services, API keys collected via tools |
@@ -55,4 +55,4 @@ In `plugin.json` → `extensions.com.openai.review.test_cases` (5 positive, 3 ne
 - [ ] Confirm every `verified: false` value in `src/config/countries.js` with local legal/tax advice for launch markets
 - [ ] Contract with a labour-time / VIN data provider (HaynesPro, Autodata…) and plug it into `operationHours(provided)`
 - [ ] Contracts and API specs with real parts suppliers per country (configure `kind: 'api'` suppliers)
-- [ ] Trademark check for "Caree" (ÚPV SR, EUIPO, WIPO)
+- [ ] Trademark check for "Garagee" (ÚPV SR, EUIPO, WIPO)

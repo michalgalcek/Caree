@@ -11,8 +11,8 @@ button{background:var(--acc);color:#fff;border:0;border-radius:8px;padding:12px 
 .row{display:flex;gap:8px;flex-wrap:wrap}.chk{display:flex;gap:8px;align-items:flex-start;font-weight:400}.chk input{width:auto;margin-top:5px}`;
 
 export function page(title, body, { lang = 'en', head = '', noTranslate = false } = {}) {
-  // noTranslate: app screens are already localised; stops browsers auto-translating the brand ("Caree" -> "career").
+  // noTranslate: app screens are already localised; stops browsers auto-translating the brand (e.g. Chrome rendering an English-looking brand as a translated word).
   const nt = noTranslate ? ' translate="no"' : '';
-  return `<!doctype html><html lang="${esc(lang)}"${nt}><head>${noTranslate ? '<meta name="google" content="notranslate">' : ''}<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  return `<!doctype html><html lang="${esc(lang)}"${nt}><head>${noTranslate ? '<meta name="google" content="notranslate">' : ''}<meta charset="utf-8"><link rel="icon" href="/favicon.svg" type="image/svg+xml"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${esc(title)}</title><meta name="robots" content="noindex"><style>${CSS}</style>${head}</head><body><main>${body}</main></body></html>`;
 }

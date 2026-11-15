@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { parseIntakeText, intakeStatus } from '../src/core/intake.js';
 import { openDb } from '../src/db.js';
-import { Caree } from '../src/services.js';
+import { Garagee } from '../src/services.js';
 import { seedDemo } from '../src/seed.js';
 import { Workshop } from '../src/core/scheduler.js';
 
@@ -24,7 +24,7 @@ test('Dictation: van, weight, VIN dictated in groups, thousands spoken', () => {
 test('Scope: over 3.5 t and non-M1/N1 rejected', () => {
   assert.ok(intakeStatus({ plate: 'X', category: 'N1', maxWeightKg: 4200, mileage: 1, customerName: 'A B', customerPhone: '0900111222', complaint: 'x' }).errors.some((e) => /3,500/.test(e)));
   assert.ok(intakeStatus({ category: 'N2' }).errors.length > 0);
-  const svc = new Caree(openDb(':memory:'));
+  const svc = new Garagee(openDb(':memory:'));
   const t = svc.createTenant({ name: 'X', country: 'SK' });
   assert.throws(() => svc.addVehicle(t.id, { plate: 'BA 111AA', category: 'N2' }), /3\.5 t/);
   assert.throws(() => svc.addVehicle(t.id, { plate: 'BA 111AA', category: 'N1', maxWeightKg: 5000 }), /3,500/);
@@ -37,7 +37,7 @@ test('Lift capacity: 3.5 t van never goes on a 2.5 t lift', () => {
 });
 
 test('Intake flow: start → update → complete creates customer, vehicle, mileage and queued job', () => {
-  const svc = new Caree(openDb(':memory:'));
+  const svc = new Garagee(openDb(':memory:'));
   const seeded = seedDemo(svc);
   const tid = seeded.tenantId;
   const r1 = svc.startIntake(tid, { text: 'Dodávka BA 456XY, 61 tisíc km, nádrž plná', actor: 't' });
@@ -55,7 +55,7 @@ test('Intake flow: start → update → complete creates customer, vehicle, mile
 });
 
 test('Intake of a known car prefills vehicle and customer', () => {
-  const svc = new Caree(openDb(':memory:'));
+  const svc = new Garagee(openDb(':memory:'));
   const { tenantId: tid } = seedDemo(svc);
   const r = svc.startIntake(tid, { text: 'ZA 123AB, 150 000 km, závada: klepe podvozok' });
   assert.equal(r.knownVehicle, true);

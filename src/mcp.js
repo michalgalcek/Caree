@@ -9,6 +9,7 @@ import { strings, widgetStrings, localNames } from './config/i18n.js';
 
 const RO = { readOnlyHint: true, destructiveHint: false, openWorldHint: false, idempotentHint: true };
 const WRITE = { readOnlyHint: false, destructiveHint: false, openWorldHint: false };
+const OVERWRITE = { readOnlyHint: false, destructiveHint: true, openWorldHint: false };
 const DESTRUCTIVE = { readOnlyHint: false, destructiveHint: true, openWorldHint: false };
 const UI = { ui: { resourceUri: WIDGET_URI }, 'openai/outputTemplate': WIDGET_URI, 'openai/widgetAccessible': true };
 
@@ -19,15 +20,15 @@ const localDateTime = z.string().regex(/^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2})?$/).des
 export const TOOL_ANNOTATION_NOTES = {}; // filled below – used to generate the submission justification document
 
 export function buildMcpServer(svc, { baseUrl }) {
-  const server = new McpServer({ name: 'caree', version: '0.1.0' }, { instructions: 'Caree manages a repair shop for passenger cars (M1) and light commercial vehicles up to 3.5 t (N1): vehicles, vehicle intake (check-in), bookings, estimates, digital inspections, workshop planning and parts orders. Heavier vehicles, motorcycles, buses and trucks are out of scope. When a technician receives a car, use start_vehicle_intake with everything they said (typed or dictated), then ask only for the missing fields and call update_vehicle_intake; finish with complete_vehicle_intake. Always confirm with the user before booking, cancelling, ordering parts or erasing data. Estimates are guidance; the shop decides the final price.' });
+  const server = new McpServer({ name: 'garagee', version: '1.0.0' }, { instructions: 'Garagee manages a repair shop for passenger cars (M1) and light commercial vehicles up to 3.5 t (N1): vehicles, vehicle intake (check-in), bookings, estimates, digital inspections, workshop planning and parts orders. Heavier vehicles, motorcycles, buses and trucks are out of scope. When a technician receives a car, use start_vehicle_intake with everything they said (typed or dictated), then ask only for the missing fields and call update_vehicle_intake; finish with complete_vehicle_intake. Always confirm with the user before booking, cancelling, ordering parts or erasing data. Estimates are guidance; the shop decides the final price.' });
 
-  server.registerResource('caree-widget', WIDGET_URI, { title: 'Caree view', mimeType: 'text/html;profile=mcp-app' }, async () => ({
-    contents: [{ uri: WIDGET_URI, mimeType: 'text/html;profile=mcp-app', text: WIDGET_HTML, _meta: { ui: { prefersBorder: true, csp: { connectDomains: [], resourceDomains: [] } }, 'openai/widgetDescription': 'Shows Caree results: free slots, estimates, workshop plan, vehicle card or job status.' } }],
+  server.registerResource('garagee-widget', WIDGET_URI, { title: 'Garagee view', mimeType: 'text/html;profile=mcp-app' }, async () => ({
+    contents: [{ uri: WIDGET_URI, mimeType: 'text/html;profile=mcp-app', text: WIDGET_HTML, _meta: { ui: { prefersBorder: true, csp: { connectDomains: [], resourceDomains: [] } }, 'openai/widgetDescription': 'Shows Garagee results: free slots, estimates, workshop plan, vehicle card or job status.' } }],
   }));
 
   const ctx = (extra) => {
     const a = extra?.authInfo?.extra;
-    if (!a?.tenantId) throw Object.assign(new Error('Not signed in to Caree.'), { code: 'auth' });
+    if (!a?.tenantId) throw Object.assign(new Error('Not signed in to Garagee.'), { code: 'auth' });
     return a;
   };
   const need = (who, role) => { if ((ROLE_RANK[who.role] || 0) < ROLE_RANK[role]) throw Object.assign(new Error(`Your role (${who.role}) cannot do this – ask the shop owner.`), { code: 'forbidden' }); };
@@ -61,7 +62,7 @@ export function buildMcpServer(svc, { baseUrl }) {
   });
 
   tool('country_rules', {
-    title: 'Country rules', description: 'Show Caree defaults for a country: inspection rules, VAT, currency, units, languages, and whether each value was verified.',
+    title: 'Country rules', description: 'Show Garagee defaults for a country: inspection rules, VAT, currency, units, languages, and whether each value was verified.',
     input: { country: z.string().length(2).describe('ISO country code, e.g. SK, DE, US') }, annotations: RO,
     why: 'Reads built-in configuration only.',
   }, async ({ country }) => {
@@ -109,7 +110,7 @@ export function buildMcpServer(svc, { baseUrl }) {
       vin: z.string().max(25).optional(), plate: z.string().max(20).optional(), make: z.string().max(40).optional(), model: z.string().max(60).optional(),
       fuel: z.enum(['PETROL', 'DIESEL', 'LPG', 'CNG', 'HYBRID', 'EV']).optional(), firstRegistration: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
       category: z.enum(['M1', 'N1']).default('M1').describe('M1 = passenger car, N1 = light commercial vehicle (van) up to 3.5 t'),
-      maxWeightKg: z.number().int().min(500).max(3500).optional().describe('Max. permissible weight; Caree only accepts vehicles up to 3,500 kg'),
+      maxWeightKg: z.number().int().min(500).max(3500).optional().describe('Max. permissible weight; Garagee only accepts vehicles up to 3,500 kg'),
       lastInspection: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(), mileage: z.number().int().min(0).max(2000000).optional(),
       customerId: z.string().optional(), customerName: z.string().max(120).optional(), customerPhone: z.string().max(40).optional(), customerEmail: z.string().email().optional(),
     }, annotations: WRITE, why: 'Creates a record in the shop; nothing is deleted or sent.',
@@ -163,7 +164,7 @@ export function buildMcpServer(svc, { baseUrl }) {
 
   tool('reschedule_appointment', {
     title: 'Reschedule appointment', description: 'Move a booked job to the earliest free time at or after the given date.',
-    input: { jobRef: z.string(), earliest: localDateTime }, annotations: WRITE, why: 'Changes the time of a booking; can be changed back; nothing is deleted or sent.',
+    input: { jobRef: z.string(), earliest: localDateTime }, annotations: OVERWRITE, why: 'Replaces the booked time of an existing job (overwrite), so it is marked destructive; nothing is sent.',
   }, async ({ jobRef, earliest }, extra) => {
     const a = ctx(extra); need(a, 'advisor');
     const j = svc.reschedule(a.tenantId, jobRef, { earliest: earliest.length === 10 ? earliest + 'T00:00' : earliest, actor: a.email });
@@ -202,7 +203,7 @@ export function buildMcpServer(svc, { baseUrl }) {
   });
 
   tool('create_approval_link', {
-    title: 'Create approval link', description: 'Create a link where the customer sees findings with photos and prices and approves or declines each item. Caree does not send it – give the link to the user to share.',
+    title: 'Create approval link', description: 'Create a link where the customer sees findings with photos and prices and approves or declines each item. Garagee does not send it – give the link to the user to share.',
     input: { jobRef: z.string() }, annotations: WRITE, why: 'Creates a private link; nothing is sent automatically.',
   }, async ({ jobRef }, extra) => {
     const a = ctx(extra); need(a, 'advisor');
@@ -259,7 +260,7 @@ export function buildMcpServer(svc, { baseUrl }) {
     const a = ctx(extra);
     const s = svc.settings(a.tenantId);
     const missing = [s.laborRate == null && 'labour rate', !svc.bays(a.tenantId).length && 'lifts/bays', !svc.mechanics(a.tenantId).length && 'mechanics', s.currency !== 'EUR' && s.fxFromEur == null && 'EUR exchange rate for reference part prices'].filter(Boolean);
-    return { text: `${s.countryName}, ${s.currency}, tax ${s.vatRate} %, labour ${s.laborRate ?? 'NOT SET'}/h.${missing.length ? ' Missing: ' + missing.join(', ') + '.' : ''}`, data: { settings: s, bays: svc.bays(a.tenantId), mechanics: svc.mechanics(a.tenantId), suppliers: svc.suppliers(a.tenantId).map(({ apiKey, ...x }) => x), missing } };
+    return { text: `${s.countryName}, ${s.currency}, tax ${s.vatRate} %, labour ${s.laborRate ?? 'NOT SET'}/h.${missing.length ? ' Missing: ' + missing.join(', ') + '.' : ''}`, data: { settings: s, bays: svc.bays(a.tenantId), mechanics: svc.mechanics(a.tenantId), suppliers: svc.suppliers(a.tenantId).map(({ apiKey, health, ...x }) => ({ ...x, status: health?.lastError ? 'last request failed' : 'ok' })), missing } };
   });
 
   tool('set_shop_settings', {
@@ -268,7 +269,7 @@ export function buildMcpServer(svc, { baseUrl }) {
       laborRate: z.number().min(0).max(100000).optional(), vatRate: z.number().min(0).max(40).optional(), currency: z.string().length(3).optional(), language: z.string().min(2).max(5).optional(),
       timezone: z.string().max(40).optional(), shopSuppliesPct: z.number().min(0).max(20).optional(), fxFromEur: z.number().positive().optional(), retentionYears: z.number().int().min(1).max(30).optional(),
       opening: z.record(z.string(), z.array(z.number().min(0).max(24)).length(2)).optional().describe('e.g. {"mon":[8,17],"sat":[8,12]}'),
-    }, annotations: WRITE, why: 'Updates configuration of the signed-in shop; old values can be set back.',
+    }, annotations: OVERWRITE, why: 'Replaces existing shop settings values (overwrite), so it is marked destructive; nothing is sent.',
   }, async (p, extra) => {
     const a = ctx(extra); need(a, 'manager');
     const s = svc.updateSettings(a.tenantId, p, a.email);
@@ -290,7 +291,7 @@ export function buildMcpServer(svc, { baseUrl }) {
 
   // ---------------- vehicle intake (vstupná prehliadka) – typed or dictated
   const intakeInput = {
-    text: z.string().max(5000).optional().describe('Everything the technician typed or dictated, verbatim (any language). Caree extracts what it can.'),
+    text: z.string().max(5000).optional().describe('Everything the technician typed or dictated, verbatim (any language). Garagee extracts what it can.'),
     fields: z.object({
       plate: z.string().max(20).optional(), vin: z.string().max(25).optional(), make: z.string().max(40).optional(), model: z.string().max(60).optional(),
       year: z.number().int().min(1950).max(2100).optional(), category: z.enum(['M1', 'N1']).optional().describe('M1 passenger car, N1 van ≤ 3.5 t'),
@@ -315,7 +316,7 @@ export function buildMcpServer(svc, { baseUrl }) {
 
   tool('update_vehicle_intake', {
     title: 'Add to vehicle intake', description: 'Add more information to a draft intake (what the technician said or typed next). Values are merged; existing values are only replaced by new non-empty ones.',
-    input: { ref: z.string().describe('Intake reference, e.g. I-00001'), ...intakeInput }, annotations: WRITE, ui: true, why: 'Updates a draft intake record; reversible, nothing is sent.',
+    input: { ref: z.string().describe('Intake reference, e.g. I-00001'), ...intakeInput }, annotations: OVERWRITE, ui: true, why: 'Replaces field values of an unfinished intake draft (overwrite), so it is marked destructive; nothing is sent.',
   }, async ({ ref, text, fields }, extra) => {
     const a = ctx(extra); need(a, 'mechanic');
     const r = svc.updateIntake(a.tenantId, ref, { text, fields: fields || {}, actor: a.email });

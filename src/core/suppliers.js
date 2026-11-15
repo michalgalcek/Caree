@@ -1,7 +1,7 @@
 // Parts supplier adapters. Shops choose their own suppliers and their order of preference.
 // Fix for the most common competitor complaint ("parts integration has issues all the time"):
 // every API call has a timeout, its health is tracked, and an order never gets lost –
-// if the API fails, Caree falls back to an e-mail order the shop can send with one click.
+// if the API fails, Garagee falls back to an e-mail order the shop can send with one click.
 
 const TIMEOUT_MS = 8000;
 

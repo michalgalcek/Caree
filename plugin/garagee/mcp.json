@@ -1,9 +1,9 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json",
   "mcpServers": {
-    "caree": {
+    "garagee": {
       "type": "streamable-http",
-      "url": "https://caree.housee.sk/mcp"
+      "url": "https://garagee.housee.sk/mcp"
     }
   }
 }

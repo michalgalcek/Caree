@@ -1,12 +1,12 @@
-# Caree
+# Garagee
 
 AI asistent a riadiaci systém pre autoservisy **osobných áut (M1) a úžitkových vozidiel do 3,5 t (N1)** – aplikácia pre ChatGPT (MCP / Apps SDK) + webové stránky pre vodičov a tablet pre mechanikov. Ťažšie vozidlá, motocykle a autobusy aplikácia neprijme.
 Prevádzkovateľ: **housee s.r.o.**
 
-## Čo Caree robí
+## Čo Garagee robí
 | Oblasť | Funkcia | Chyba konkurencie, ktorú rieši |
 |---|---|---|
-| Vstupná prehliadka | technik prijme auto písaním alebo hlasom (tablet: diktovanie v jazyku servisu; ChatGPT: hlasový režim); Caree rozpozná EČV, VIN, km, palivo, druh vozidla, hmotnosť, zákazníka, závadu, poškodenia a pýta sa len na chýbajúce údaje; známe auto doplní z databázy; po dokončení vznikne zákazka v poradí na plánovanie | – |
+| Vstupná prehliadka | technik prijme auto písaním alebo hlasom (tablet: diktovanie v jazyku servisu; ChatGPT: hlasový režim); Garagee rozpozná EČV, VIN, km, palivo, druh vozidla, hmotnosť, zákazníka, závadu, poškodenia a pýta sa len na chýbajúce údaje; známe auto doplní z databázy; po dokončení vznikne zákazka v poradí na plánovanie | – |
 | Rozsah 3,5 t | len M1 a N1 do 3 500 kg; nosnosť zdvihákov – dodávka nejde na slabší zdvihák; pravidlá STK pre N1 (kde nie sú nastavené, použije sa M1 a označí sa na overenie) | – |
 | Vozidlá | karta auta, kontrola VIN (I/O/Q, dĺžka, kontrolná číslica – v EÚ len varovanie), história, nájazd | – |
 | Kontroly | STK/EK, HU, MOT, ITV, APK, §57a… podľa krajiny; pravidlá s dátumom platnosti (napr. AT od 19. 5. 2027) | americké systémy nepoznajú európske lehoty |
@@ -30,7 +30,7 @@ Jazyky zákazníckych stránok: en, sk, cs, de, pl, hu, fr, it, es, nl. ChatGPT 
 ```bash
 npm install
 npm test                       # 32 testov: jadro, vstupná prehliadka, OAuth, MCP, reštart servera
-DEMO_SEED=1 npm start          # http://localhost:3000, demo: demo@caree.test / demo-password-123
+DEMO_SEED=1 npm start          # http://localhost:3000, demo: demo@garagee.test / demo-password-123
 npm run annotations            # vygeneruje docs/TOOL_ANNOTATIONS.md
 ```
 Pripojenie v ChatGPT (Developer Mode): Settings → Apps → Create → URL `https://<doména>/mcp`, autentifikácia OAuth.
@@ -61,6 +61,6 @@ src/web/         widget (MCP Apps UI), rezervácie, schvaľovanie, tablet PWA, p
 2. Reálne API dodávateľov dielov podľa krajiny (`kind: 'api'`, endpointy podľa zmluvy).
 3. Faktúry/pokladnica (e-Kasa SK, EET/účtovné systémy) – zatiaľ nie sú súčasťou.
 4. Právna kontrola textov a hodnôt `verified: false`.
-5. Odosielanie SMS/e-mailov (Caree zatiaľ len vytvára odkazy – nič neposiela samo).
+5. Odosielanie SMS/e-mailov (Garagee zatiaľ len vytvára odkazy – nič neposiela samo).
 
 Podklady na odoslanie do OpenAI: `docs/SUBMISSION.md`, `docs/TOOL_ANNOTATIONS.md`.

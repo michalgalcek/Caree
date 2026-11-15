@@ -3,13 +3,13 @@
 import { page } from './html.js';
 
 export const SERVICE_WORKER = `
-const C='caree-app-v2';
+const C='garagee-app-v3';
 self.addEventListener('install',e=>e.waitUntil(caches.open(C).then(c=>c.addAll(['/app']))));
 self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==C).map(k=>caches.delete(k))))));
 self.addEventListener('fetch',e=>{ const u=new URL(e.request.url); if(e.request.method==='GET' && u.pathname==='/app'){ e.respondWith(fetch(e.request).then(r=>{caches.open(C).then(c=>c.put(e.request,r.clone()));return r;}).catch(()=>caches.match(e.request))); }});`;
 
 export function tabletPage() {
-  return page('Caree – Workshop', `
+  return page('Garagee – Workshop', `
 <style>
 .tabs{display:flex;gap:8px;margin:8px 0 16px}.tabs button{flex:1}.tabs button.on{background:var(--acc);color:#fff}.tabs button:not(.on){background:transparent;color:var(--acc);border:1px solid var(--acc)}
 .fld{display:flex;gap:6px;align-items:flex-end}.fld label{flex:1;margin:8px 0}.mic{padding:10px 12px;min-width:44px}.mic.rec{background:#c62828}
@@ -17,7 +17,7 @@ export function tabletPage() {
 .big{width:100%;padding:16px;font-size:1.1rem;margin:8px 0}.ok{color:var(--green);font-weight:600}
 h3{margin:18px 0 4px;font-size:1rem;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
 </style>
-<h1>Caree – workshop</h1>
+<h1>Garagee – workshop</h1>
 <div id="login" class="card" hidden>
   <label>E-mail<input id="em" type="email" autocomplete="username"></label>
   <label>Password<input id="pw" type="password" autocomplete="current-password"></label>
@@ -38,10 +38,10 @@ h3{margin:18px 0 4px;font-size:1rem;color:var(--muted);text-transform:uppercase;
 </div>
 <script>
 const $=id=>document.getElementById(id);
-const S={get t(){return localStorage.getItem('caree_t')}, set t(v){v?localStorage.setItem('caree_t',v):localStorage.removeItem('caree_t')},
-  get q(){try{return JSON.parse(localStorage.getItem('caree_q')||'[]')}catch{return []}}, set q(v){localStorage.setItem('caree_q',JSON.stringify(v))},
-  get cache(){try{return JSON.parse(localStorage.getItem('caree_today')||'null')}catch{return null}}, set cache(v){localStorage.setItem('caree_today',JSON.stringify(v))},
-  get draft(){try{return JSON.parse(localStorage.getItem('caree_intake')||'{}')}catch{return {}}}, set draft(v){localStorage.setItem('caree_intake',JSON.stringify(v))}};
+const S={get t(){return localStorage.getItem('garagee_t')}, set t(v){v?localStorage.setItem('garagee_t',v):localStorage.removeItem('garagee_t')},
+  get q(){try{return JSON.parse(localStorage.getItem('garagee_q')||'[]')}catch{return []}}, set q(v){localStorage.setItem('garagee_q',JSON.stringify(v))},
+  get cache(){try{return JSON.parse(localStorage.getItem('garagee_today')||'null')}catch{return null}}, set cache(v){localStorage.setItem('garagee_today',JSON.stringify(v))},
+  get draft(){try{return JSON.parse(localStorage.getItem('garagee_intake')||'{}')}catch{return {}}}, set draft(v){localStorage.setItem('garagee_intake',JSON.stringify(v))}};
 if('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(()=>{});
 async function api(p,o={}){const r=await fetch(p,{...o,headers:{'content-type':'application/json',authorization:'Bearer '+S.t}});if(r.status===401){S.t=null;show();throw new Error('auth')}if(!r.ok)throw new Error(r.status);return r.json()}
 function status(){ $('net').textContent=navigator.onLine?'online':'OFFLINE – changes are saved on this tablet'; $('q').textContent=S.q.length?S.q.length+' change(s) waiting to sync':'all synced'; }

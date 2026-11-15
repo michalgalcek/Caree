@@ -1,21 +1,21 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
-  "name": "caree",
+  "name": "garagee",
   "version": "1.0.0",
   "description": "Workshop assistant for repair shops servicing cars and vans up to 3.5 t: vehicle intake by voice, estimates, bookings, workshop planning and parts orders.",
   "author": {
     "name": "housee s.r.o.",
     "email": "housee@housee.sk",
-    "url": "https://caree.housee.sk"
+    "url": "https://garagee.housee.sk"
   },
-  "homepage": "https://caree.housee.sk",
+  "homepage": "https://garagee.housee.sk",
   "mcpServers": "./mcp.json",
   "extensions": {
     "com.openai": {
       "interface": {
-        "displayName": "Caree",
+        "displayName": "Garagee",
         "shortDescription": "Car repair shop assistant",
-        "longDescription": "Caree is a workshop assistant for independent repair shops that service passenger cars and vans up to 3.5 t. Technicians and service advisers use it right inside ChatGPT:\n\n• Vehicle intake (check-in): type or dictate what you see – plate, VIN, mileage, fuel level, warning lights, damage, keys, customer and complaint – and Caree fills the intake form and asks only for what is missing.\n• Vehicle and customer records with VIN decoding, mileage history, next periodic inspection by country rules and maintenance due dates.\n• Repair estimates in the shop's currency with VAT, using the shop's labour rate, its own measured repair times and overlap savings between operations.\n• Free slots and bookings that respect lifts (including lift capacity), mechanics' skills and parts delivery times; daily workshop plan with utilisation.\n• Digital inspection findings and a customer approval link.\n• Parts price comparison and orders from the suppliers the shop chooses – always confirmed by the user first.\n• GDPR tools: data export and erasure per customer. The shop is the data controller; Caree (housee s.r.o.) is its processor.\n\nEstimates are guidance – the shop decides the final price. Caree requires a Caree workshop account.",
+        "longDescription": "Garagee is a workshop assistant for independent repair shops that service passenger cars and vans up to 3.5 t. Technicians and service advisers use it right inside ChatGPT:\n\n• Vehicle intake (check-in): type or dictate what you see – plate, VIN, mileage, fuel level, warning lights, damage, keys, customer and complaint – and Garagee fills the intake form and asks only for what is missing.\n• Vehicle and customer records with VIN decoding, mileage history, next periodic inspection by country rules and maintenance due dates.\n• Repair estimates in the shop's currency with VAT, using the shop's labour rate, its own measured repair times and overlap savings between operations.\n• Free slots and bookings that respect lifts (including lift capacity), mechanics' skills and parts delivery times; daily workshop plan with utilisation.\n• Digital inspection findings and a customer approval link.\n• Parts price comparison and orders from the suppliers the shop chooses – always confirmed by the user first.\n• GDPR tools: data export and erasure per customer. The shop is the data controller; Garagee (housee s.r.o.) is its processor.\n\nEstimates are guidance – the shop decides the final price. Garagee requires a Garagee shop account – shops create one at garagee.housee.sk/signup.",
         "developerName": "housee s.r.o.",
         "category": "Productivity",
         "capabilities": [
@@ -28,10 +28,10 @@
           "Parts comparison and orders",
           "Customer data export and erasure"
         ],
-        "websiteURL": "https://caree.housee.sk/",
-        "supportURL": "https://caree.housee.sk/support",
-        "privacyPolicyURL": "https://caree.housee.sk/privacy",
-        "termsOfServiceURL": "https://caree.housee.sk/terms",
+        "websiteURL": "https://garagee.housee.sk/",
+        "supportURL": "https://garagee.housee.sk/support",
+        "privacyPolicyURL": "https://garagee.housee.sk/privacy",
+        "termsOfServiceURL": "https://garagee.housee.sk/terms",
         "defaultPrompt": [
           "Start a vehicle intake: car ZA 999ZZ, 54,000 km, customer Eva Mala, front wheel humming.",
           "How much is a timing belt and water pump on ZA 123AB?",
@@ -47,19 +47,19 @@
           "positive": [
             {
               "description": "Vehicle intake from one dictated sentence",
-              "prompt": "New car just arrived: passenger car ZA 999ZZ, Skoda Octavia 2019 diesel, 54,000 km, fuel half, no warning lights, customer Eva Mala +421 905 123 456, complaint: front wheel humming, damage: scratched left mirror, two keys. Start the intake in Caree.",
+              "prompt": "New car just arrived: passenger car ZA 999ZZ, Skoda Octavia 2019 diesel, 54,000 km, fuel half, no warning lights, customer Eva Mala +421 905 123 456, complaint: front wheel humming, damage: scratched left mirror, two keys. Start the intake in Garagee.",
               "tools_triggered": "start_vehicle_intake",
               "expected_behavior": "Intake card I-000xx with all recognised fields (plate, make, model, year, fuel, mileage, fuel level, warning lights, damage, keys, customer name and phone, complaint) and the note that all required data is filled. Nothing is saved as a vehicle or job yet; ChatGPT asks whether to complete the intake."
             },
             {
-              "description": "Complete the intake and create a job",
-              "prompt": "Yes, complete the intake.",
-              "tools_triggered": "complete_vehicle_intake",
-              "expected_behavior": "Customer and vehicle are stored, mileage recorded, a job J-000xx is created with status 'requested' and waits in the planning queue. The card shows the job number."
+              "description": "Check in a van and save it as a job in one go",
+              "prompt": "Check in a van in Garagee: VW Transporter T6, plate BA 456CD, 3.2 t, 210,000 km, customer Peter Horvath +421 911 222 333, complaint: knocking from the front suspension, two keys. Save it and create the job.",
+              "tools_triggered": "start_vehicle_intake, complete_vehicle_intake",
+              "expected_behavior": "Intake card with make, model, category N1, weight 3,200 kg, mileage, customer, phone, complaint and keys; after the user confirms, the intake is completed and a job J-000xx in status 'requested' is shown in the planning queue."
             },
             {
               "description": "Look up a vehicle and its due services",
-              "prompt": "Show me the car ZA 123AB in Caree.",
+              "prompt": "Show me the car ZA 123AB in Garagee.",
               "tools_triggered": "find_vehicle, get_vehicle",
               "expected_behavior": "Vehicle card: Skoda Octavia 2020, VIN, the next periodic inspection date (overdue in the demo data) and maintenance items; items without service history are marked as estimates."
             },
@@ -78,22 +78,22 @@
           ],
           "negative": [
             {
-              "description": "General car advice is not shop management",
-              "prompt": "Which family car should I buy?"
+              "description": "General car buying advice – not shop management",
+              "prompt": "Which family car should I buy for about 25,000 euros?"
             },
             {
-              "description": "Vehicles over 3.5 t are out of scope",
-              "prompt": "Register my 7.5 t truck for service in Caree."
+              "description": "Translation request unrelated to a shop's data",
+              "prompt": "How do you say 'brake pads' in German?"
             },
             {
-              "description": "No bulk deletion of customer data",
-              "prompt": "Delete all customers who have not visited since 2015."
+              "description": "Creative writing unrelated to the app",
+              "prompt": "Write a short poem about an old car."
             }
           ]
         },
         "demo_recording_url": "https://REPLACE-WITH-VIDEO-URL",
         "commerce": false,
-        "commerce_description": "No commerce in ChatGPT. Caree does not sell, show plans, prices of Caree or checkout links. Parts orders go to the shop's own suppliers under the shop's existing accounts, only after the user confirms."
+        "commerce_description": "No commerce in ChatGPT. Garagee does not sell, show plans, prices of Garagee or checkout links. Parts orders go to the shop's own suppliers under the shop's existing accounts, only after the user confirms."
       },
       "publication": {
         "countries": [

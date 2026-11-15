@@ -1,7 +1,7 @@
 // Business services. All methods take tenantId first and filter by it.
 import { randomBytes, scryptSync, timingSafeEqual } from 'node:crypto';
 import { id, nowIso, J } from './db.js';
-import { effectiveSettings, getCountry } from './config/countries.js';
+import { effectiveSettings, getCountry, COUNTRIES } from './config/countries.js';
 import { decodeVin, normalizeVin } from './core/vin.js';
 import { nextInspection, maintenanceDue } from './core/inspection.js';
 import { estimate, lookupOperation, OPERATIONS } from './core/estimator.js';
@@ -32,7 +32,7 @@ export function localNow(tz, d = new Date()) {
 
 const rowTenant = (r) => r && { ...r, settings: J.parse(r.settings, {}) };
 
-export class Caree {
+export class Garagee {
   constructor(db, { fetchImpl } = {}) { this.db = db; this.fetchImpl = fetchImpl; }
   q(sql) { return this.db.prepare(sql); }
   audit(tid, actor, action, entity, entityId) {
@@ -68,6 +68,39 @@ export class Caree {
     const u = this.q('SELECT * FROM users WHERE email=?').get(String(email || '').toLowerCase().trim());
     if (!u || !checkPassword(password, u.pass_hash)) return null;
     return { id: u.id, email: u.email, role: u.role, tenantId: u.tenant_id, name: u.name };
+  }
+  /** Self-service sign-up of a new shop with its owner account. */
+  signup({ shopName, country, ownerName = null, email, password }) {
+    const e = String(email || '').toLowerCase().trim();
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e)) throw new Invalid('valid e-mail required');
+    if (this.q('SELECT 1 FROM users WHERE email=?').get(e)) throw new Invalid('an account with this e-mail already exists');
+    if (!shopName || String(shopName).trim().length < 2) throw new Invalid('shop name required');
+    if (!COUNTRIES[String(country || '').toUpperCase()]) throw new Invalid('choose a supported country');
+    if (!password || password.length < 10) throw new Invalid('password must have at least 10 characters');
+    let out;
+    this.db.exec('BEGIN');
+    try {
+      const t = this.createTenant({ name: String(shopName).trim().slice(0, 80), country });
+      const u = this.createUser(t.id, { email: e, password, role: 'owner', name: ownerName ? String(ownerName).trim().slice(0, 80) : null });
+      this.audit(t.id, u.id, 'account.signup');
+      this.db.exec('COMMIT'); out = { tenant: t, user: u };
+    } catch (err) { this.db.exec('ROLLBACK'); throw err; }
+    return out;
+  }
+  /** Deletes a shop and everything stored for it (owner request). */
+  deleteTenant(tid) {
+    const users = this.q('SELECT id FROM users WHERE tenant_id=?').all(tid).map((u) => u.id);
+    this.db.exec('BEGIN');
+    try {
+      for (const uid of users) { this.q('DELETE FROM oauth_tokens WHERE user_id=?').run(uid); this.q('DELETE FROM oauth_codes WHERE user_id=?').run(uid); }
+      const tables = this.q("SELECT name FROM sqlite_master WHERE type='table'").all().map((r) => r.name)
+        .filter((t) => t !== 'tenants' && this.q(`PRAGMA table_info(${t})`).all().some((c) => c.name === 'tenant_id'));
+      for (const t of tables.filter((t) => t !== 'users')) this.q(`DELETE FROM ${t} WHERE tenant_id=?`).run(tid);
+      this.q('DELETE FROM users WHERE tenant_id=?').run(tid);
+      this.q('DELETE FROM tenants WHERE id=?').run(tid);
+      this.db.exec('COMMIT');
+    } catch (err) { this.db.exec('ROLLBACK'); throw err; }
+    return { deleted: true };
   }
   user(uid) { const u = this.q('SELECT id,email,role,tenant_id,name FROM users WHERE id=?').get(uid); return u && { id: u.id, email: u.email, role: u.role, tenantId: u.tenant_id, name: u.name }; }
 
@@ -105,8 +138,8 @@ export class Caree {
   }
   addVehicle(tid, { customerId = null, vin = null, plate = null, make = null, model = null, engine = null, year = null, fuel = null, category = 'M1', maxWeightKg = null, firstRegistration = null, lastInspection = null, mileage = null }) {
     category = String(category || 'M1').toUpperCase();
-    if (!['M1', 'N1'].includes(category)) throw new Invalid('Caree is for passenger cars (M1) and light commercial vehicles up to 3.5 t (N1) only.');
-    if (maxWeightKg != null && Number(maxWeightKg) > MAX_WEIGHT_KG) throw new Invalid(`Vehicle weight ${maxWeightKg} kg is over 3,500 kg – Caree is for vehicles up to 3.5 t only.`);
+    if (!['M1', 'N1'].includes(category)) throw new Invalid('Garagee is for passenger cars (M1) and light commercial vehicles up to 3.5 t (N1) only.');
+    if (maxWeightKg != null && Number(maxWeightKg) > MAX_WEIGHT_KG) throw new Invalid(`Vehicle weight ${maxWeightKg} kg is over 3,500 kg – Garagee is for vehicles up to 3.5 t only.`);
     let decoded = null;
     if (vin) {
       decoded = decodeVin(vin);
@@ -411,7 +444,7 @@ export class Caree {
     const jobs = this.q(`SELECT ref,title,start,end,bay_id,assignments,status,customer_waiting FROM jobs WHERE tenant_id=? AND status IN ('booked','in_progress') AND substr(start,1,10)<=? AND substr(end,1,10)>=? ORDER BY start`).all(tid, day, day)
       .map((j) => ({ ref: j.ref, title: j.title, start: j.start, end: j.end, bay: this.bays(tid).find((b) => b.id === j.bay_id)?.name, mechanics: [...new Set(J.parse(j.assignments, []).flatMap((a) => a.mechanicNames || []))], status: j.status, customerWaiting: !!j.customer_waiting }));
     const waiting = this.q(`SELECT ref,title,customer_waiting,promised_by,parts_eta,created_at FROM jobs WHERE tenant_id=? AND status='requested'`).all(tid);
-    return { date: day, jobs, utilisation: ws.utilisation(day), unscheduledQueue: prioritise(waiting.map((w) => ({ ...w, customerWaiting: !!w.customer_waiting, promisedBy: w.promised_by, partsEta: w.parts_eta, createdAt: w.created_at }))) };
+    return { date: day, jobs, utilisation: ws.utilisation(day), unscheduledQueue: prioritise(waiting.map((w) => ({ ref: w.ref, title: w.title, customerWaiting: !!w.customer_waiting, promisedBy: w.promised_by, partsEta: w.parts_eta, createdAt: w.created_at }))).map(({ createdAt, ...x }) => x) };
   }
 
   // ---------- public booking requests (no account needed for the driver)
@@ -440,7 +473,6 @@ export class Caree {
       ref: r.ref, status: r.status, data, ...st,
       missingLabels: st.missing.map((k) => L[k]), recommendedLabels: st.recommended.map((k) => L[k]),
       labels: L, vehicleId: r.vehicle_id, customerId: r.customer_id, jobRef: r.job_id ? this.q('SELECT ref FROM jobs WHERE id=?').get(r.job_id)?.ref : null,
-      createdAt: r.created_at, completedAt: r.completed_at,
     };
   }
   /** Prefill from an existing vehicle/customer when the plate or VIN is already known (returning customer). */
@@ -533,7 +565,7 @@ export class Caree {
     const vehicles = this.q('SELECT * FROM vehicles WHERE tenant_id=? AND customer_id=?').all(tid, cid).map(mapVehicle);
     const jobs = this.q('SELECT ref,status,title,start,end,invoice_total,invoice_currency,created_at FROM jobs WHERE tenant_id=? AND customer_id=?').all(tid, cid);
     this.audit(tid, null, 'gdpr.export', 'customer', cid);
-    return { exportedAt: nowIso(), controller: this.tenant(tid).name, processor: 'housee s.r.o. (Caree)', customer: c, vehicles, jobs };
+    return { exportedAt: nowIso(), controller: this.tenant(tid).name, processor: 'housee s.r.o. (Garagee)', customer: c, vehicles, jobs };
   }
   /** Erase personal data but KEEP jobs/invoices (accounting law) – fixes "deleting a vehicle deletes its invoices". */
   anonymizeCustomer(tid, cid, { actor } = {}) {

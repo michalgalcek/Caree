@@ -1,7 +1,7 @@
 {
-  "name": "caree",
+  "name": "garagee",
   "version": "0.1.0",
-  "description": "Caree – AI workshop assistant for car repair shops (ChatGPT app). Operated by housee s.r.o.",
+  "description": "Garagee – AI workshop assistant for car repair shops (ChatGPT app). Operated by housee s.r.o.",
   "main": "src/server.js",
   "scripts": {
     "start": "node --no-warnings src/server.js",

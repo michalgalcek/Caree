@@ -1,7 +1,7 @@
 // Single UI resource for ChatGPT (MCP Apps). Renders tool results: slots, estimate, plan, vehicle card, job status.
 // Reads data through the standard ui/notifications/tool-result bridge, with window.openai as ChatGPT fallback.
 // All data is treated as untrusted: rendered with textContent only.
-export const WIDGET_URI = 'ui://caree/widget-v2.html';
+export const WIDGET_URI = 'ui://garagee/widget-v3.html';
 
 export const WIDGET_HTML = `<!doctype html><html translate="no"><head><meta name="google" content="notranslate"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <style>
@@ -15,7 +15,7 @@ button[disabled]{opacity:.5;cursor:default}
 table{width:100%;border-collapse:collapse}td,th{padding:5px 4px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}td.r,th.r{text-align:right}
 .bar{height:8px;border-radius:4px;background:var(--line);overflow:hidden}.bar>i{display:block;height:100%;background:var(--acc)}
 .red{color:#c62828}.amber{color:#b26a00}.green{color:#2e7d32}
-</style></head><body><div class="wrap" id="root"><div class="muted">Caree…</div></div>
+</style></head><body><div class="wrap" id="root"><div class="muted">Garagee…</div></div>
 <script>
 (function(){
   var root=document.getElementById('root'); var reqId=1; var pending={};
@@ -33,7 +33,7 @@ table{width:100%;border-collapse:collapse}td,th{padding:5px 4px;border-bottom:1p
     if(m.id && pending[m.id]){ var p=pending[m.id]; delete pending[m.id]; m.error?p.rej(m.error):p.res(m.result); return; }
     if(m.method==='ui/notifications/tool-result' && m.params) render(m.params.structuredContent||m.params);
   });
-  try{ rpc('ui/initialize',{appInfo:{name:'Caree',version:'1'},appCapabilities:{},protocolVersion:'2026-01-26'}).then(function(){ window.parent.postMessage({jsonrpc:'2.0',method:'ui/notifications/initialized',params:{}},'*'); }).catch(function(){}); }catch(e){}
+  try{ rpc('ui/initialize',{appInfo:{name:'Garagee',version:'1'},appCapabilities:{},protocolVersion:'2026-01-26'}).then(function(){ window.parent.postMessage({jsonrpc:'2.0',method:'ui/notifications/initialized',params:{}},'*'); }).catch(function(){}); }catch(e){}
   function fromOpenAI(){ if(window.openai && window.openai.toolOutput) render(window.openai.toolOutput); }
   window.addEventListener('openai:set_globals',fromOpenAI); fromOpenAI();
 

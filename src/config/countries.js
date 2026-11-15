@@ -1,4 +1,4 @@
-// Market configuration for Caree.
+// Market configuration for Garagee.
 //
 // Every legal value (inspection intervals, VAT) carries `verified`:
 //   - a date + source  -> checked against a public source on that date
@@ -16,7 +16,7 @@ export const MARKET_TIERS = {
   3: 'Supported with regional rules set by the shop',
 };
 
-// Caree scope: passenger cars (M1) and light commercial vehicles up to 3.5 t (N1). Where a country has no
+// Garagee scope: passenger cars (M1) and light commercial vehicles up to 3.5 t (N1). Where a country has no
 // separate N1 rule configured, the M1 rule is used and the result is flagged so the shop verifies it.
 export const SUPPORTED_CATEGORIES = ['M1', 'N1'];
 export const MAX_WEIGHT_KG = 3500;

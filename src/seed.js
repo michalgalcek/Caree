@@ -1,16 +1,16 @@
 // Demo shop for development and for the OpenAI review account (fully featured, no sign-up, no 2FA).
 import { fileURLToPath } from 'node:url';
 import { openDb } from './db.js';
-import { Caree, hashPassword } from './services.js';
+import { Garagee, hashPassword } from './services.js';
 
-export function seedDemo(svc, { email = (process.env.DEMO_EMAIL || 'demo@caree.test').trim().toLowerCase(), password = (process.env.DEMO_PASSWORD || 'demo-password-123').trim(), country = 'SK' } = {}) {
+export function seedDemo(svc, { email = (process.env.DEMO_EMAIL || 'demo@garagee.test').trim().toLowerCase(), password = (process.env.DEMO_PASSWORD || 'demo-password-123').trim(), country = 'SK' } = {}) {
   if (process.env.NODE_ENV === 'production' && password === 'demo-password-123') throw new Error('Set DEMO_PASSWORD (≥10 chars) to seed the demo account in production.');
   if (password.length < 10) throw new Error(`DEMO_PASSWORD is too short (${password.length} chars, need ≥10).`);
   const existing = svc.db.prepare('SELECT id FROM users WHERE email=?').get(email);
   if (existing) {
     // keep the review account's password in sync with the DEMO_PASSWORD secret
     svc.db.prepare('UPDATE users SET pass_hash=? WHERE id=?').run(hashPassword(password), existing.id);
-    console.log(`[caree] demo account ready: ${email} (password synced from secret, ${password.length} chars)`);
+    console.log(`[garagee] demo account ready: ${email} (password synced from secret, ${password.length} chars)`);
     return null;
   }
   const t = svc.createTenant({ name: { SK: 'Demo Autoservis', CZ: 'Demo Autoservis', DE: 'Demo Autowerkstatt', AT: 'Demo Autowerkstatt' }[country] || 'Demo Garage', country, settings: { laborRate: 48, ...(country === 'GB' ? { fxFromEur: 0.85 } : {}), /* demo only: EUR→GBP for reference part prices (mid-market ≈0.85 in Nov 2026); a real shop sets its own */ opening: { mon: [7, 16], tue: [7, 16], wed: [7, 16], thu: [7, 16], fri: [7, 15] } } });
@@ -36,11 +36,11 @@ export function seedDemo(svc, { email = (process.env.DEMO_EMAIL || 'demo@caree.t
     { item: 'Brake fluid', status: 'amber', measurement: 'Water content 3 %', recommendedOp: 'BRAKE_FLUID' },
     { item: 'Tyres', status: 'green', measurement: '5 mm' },
   ], { actor: 'seed' });
-  console.log(`[caree] demo account created: ${email} (${password.length} chars password)`);
+  console.log(`[garagee] demo account created: ${email} (${password.length} chars password)`);
   return { tenantId: t.id, email, vehicles: [v1.id, v2.id], job: j.ref };
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  const svc = new Caree(openDb());
+  const svc = new Garagee(openDb());
   console.log(JSON.stringify(seedDemo(svc), null, 2));
 }
