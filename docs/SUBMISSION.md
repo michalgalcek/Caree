@@ -33,7 +33,7 @@ Sources: developers.openai.com/plugins/deploy/submission, developers.openai.com/
 
 ## D. Authentication & review account
 - OAuth 2.1, authorization code + PKCE (S256), dynamic client registration at `/register`, metadata at `/.well-known/oauth-authorization-server` and `/.well-known/oauth-protected-resource/mcp`.
-- Reviewer account (English, UK shop "Demo Garage"): `REVIEW_EMAIL` (fly.toml) + secret `REVIEW_PASSWORD` (≥10 chars, set with `fly secrets set` or the Fly dashboard). Enter e-mail and password only in the portal's **Review details** – never in the ZIP. Same data as the Slovak demo: 3 lifts, 3 mechanics, 3 suppliers, 2 vehicles, 1 job with inspection findings. No sign-up, no 2FA.
+- Reviewer account (English, UK shop "Demo Garage"): `REVIEW_EMAIL` (fly.toml) + secret `REVIEW_PASSWORD` (≥10 chars, set with `fly secrets set` or the Fly dashboard). Enter e-mail and password only in the portal's **Review details** – never in the ZIP. Login: `review@garagee.test`. Same data as the Slovak demo: 3 lifts, 3 mechanics, 3 suppliers, 2 vehicles, 1 job with inspection findings. No sign-up, no 2FA.
 - Slovak demo shop for our own tests: `DEMO_EMAIL` + secret `DEMO_PASSWORD`.
 
 ## E. Policy compliance (how Garagee meets it)
@@ -44,7 +44,9 @@ Sources: developers.openai.com/plugins/deploy/submission, developers.openai.com/
 | No in-app commerce of digital goods | No plans, prices, upgrades or checkout links shown in ChatGPT. Subscriptions only on the website. |
 | No ads | None |
 | Explicit annotations | All tools set readOnlyHint / destructiveHint / openWorldHint – see `TOOL_ANNOTATIONS.md` |
-| Human confirmation for irreversible actions | `order_parts` and `erase_customer_data` require `confirmed: true`; tool descriptions instruct to confirm with the user; `cancel_appointment` marked destructive |
+| Human confirmation for irreversible actions | `order_parts` and `erase_customer_data` require `confirmed: true`; tool descriptions instruct to confirm with the user; `cancel_appointment`, `reschedule_appointment`, `set_shop_settings` and `update_vehicle_intake` marked destructive because they delete or overwrite data |
+| Real, complete product | Shops create their own account at `/signup` (terms + DPA consent) and can delete it with all data at `/account/delete`; the reviewer account is just a pre-filled shop |
+| No telemetry in tool output | No session/trace IDs or internal timestamps in tool results; only business data (e.g. job dates, export date in a GDPR export) |
 | Transparent auth | Sign-in page states what is accessed; scope `workshop` only |
 | Untrusted data in UI | Widget renders with `textContent` only; no remote scripts; empty CSP domain lists |
 
@@ -55,4 +57,5 @@ In `plugin.json` → `extensions.com.openai.review.test_cases` (5 positive, 3 ne
 - [ ] Confirm every `verified: false` value in `src/config/countries.js` with local legal/tax advice for launch markets
 - [ ] Contract with a labour-time / VIN data provider (HaynesPro, Autodata…) and plug it into `operationHours(provided)`
 - [ ] Contracts and API specs with real parts suppliers per country (configure `kind: 'api'` suppliers)
-- [ ] Trademark check for "Garagee" (ÚPV SR, EUIPO, WIPO)
+- [x] TMview check 15 Nov 2026: no identical "GARAGEE" mark; closest: GaraGeeks (IT, class 42), GARAGE1 (CH, 9/42). Descriptiveness risk ("garage") – ask a trademark attorney before filing.
+- [x] Domains 15 Nov 2026: garagee.sk and garagee.eu free; garagee.com held and listed for sale (Afternic)
