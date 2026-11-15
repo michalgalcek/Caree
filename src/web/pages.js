@@ -71,9 +71,9 @@ export function publicRouter(svc, { baseUrl, provider }) {
   r.get('/plans', (_q, res) => {
     const lim = (v) => v == null ? 'unlimited' : v.toLocaleString('en');
     res.type('html').send(page('Plans – Garagee', `
-    <h1>Garagee plans</h1>
-    <p class="muted">Every shop starts on <b>Start</b>. The same limits apply in ChatGPT, on the workshop tablet and on the web. Existing vehicles always keep working; at the limit only adding new vehicles is paused.</p>
-    <table><tr><th></th><th>Start</th><th>Profi</th><th>Workshop+</th></tr>
+    <h1><span translate="no">Garagee</span> plans</h1>
+    <p class="muted">Every shop starts on <b translate="no">Start</b>. The same limits apply in ChatGPT, on the workshop tablet and on the web. Existing vehicles always keep working; at the limit only adding new vehicles is paused.</p>
+    <table><tr><th></th><th translate="no">Start</th><th translate="no">Profi</th><th translate="no">Workshop+</th></tr>
       <tr><td>Active vehicles</td><td>${lim(PLANS.start.vehicles)}</td><td>${lim(PLANS.profi.vehicles)}</td><td>${lim(PLANS.workshop.vehicles)}</td></tr>
       <tr><td>Users</td><td>1</td><td>up to 5</td><td>unlimited, several locations</td></tr>
       <tr><td>Vehicle intake (typing or voice), estimates, free slots, bookings, workshop plan</td><td>✓</td><td>✓</td><td>✓</td></tr>
@@ -86,7 +86,7 @@ export function publicRouter(svc, { baseUrl, provider }) {
       <tr><td>Data import from your previous system</td><td>–</td><td>✓ (on request)</td><td>✓ (on request)</td></tr>
       <tr><td>Support</td><td>e-mail</td><td>priority e-mail</td><td>phone</td></tr>
     </table>
-    <p>Profi and Workshop+ are arranged directly with housee s.r.o. – write to <a href="/support">support</a>.</p>`));
+    <p><span translate="no">Profi</span> and <span translate="no">Workshop+</span> are arranged directly with <span translate="no">housee s.r.o.</span> – write to <a href="/support">support</a>.</p>`));
   });
 
   // ---- account deletion by the shop owner ----
