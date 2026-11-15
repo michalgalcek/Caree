@@ -493,7 +493,10 @@ export class Garagee {
     if (!key) return { data, existing: null };
     const v = this.findVehiclesSafe(tid, data.vin || data.plate).find((x) => (data.vin && x.vin === data.vin) || (data.plate && normPlate(x.plate)?.replace(/\s/g, '') === data.plate.replace(/\s/g, '')));
     if (!v) return { data, existing: null };
-    const c = v.customerId ? this.customer(tid, v.customerId) : null;
+    let c = v.customerId ? this.customer(tid, v.customerId) : null;
+    // a different person brings the car → do not copy the previous owner's contact details
+    const nn = (s) => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, ' ').trim();
+    if (c && data.customerName && nn(c.name) !== nn(data.customerName)) c = null;
     const pre = { plate: v.plate, vin: v.vin, make: v.make, model: v.model, year: v.year, fuel: v.fuel, category: v.category, maxWeightKg: v.maxWeightKg, firstRegistration: v.firstRegistration, lastInspection: v.lastInspection, customerName: c && !c.anonymized ? c.name : undefined, customerPhone: c?.phone || undefined, customerEmail: c?.email || undefined };
     const merged = { ...Object.fromEntries(Object.entries(pre).filter(([, x]) => x != null)), ...data };
     return { data: merged, existing: v };

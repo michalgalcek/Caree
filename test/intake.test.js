@@ -66,6 +66,20 @@ test('Intake of a known car prefills vehicle and customer', () => {
   assert.equal(done.vehicleId, svc.findVehicles(tid, 'ZA 123AB')[0].id, 'no duplicate vehicle');
 });
 
+test('Known car brought by a different customer does not inherit the old owner', () => {
+  const svc = new Garagee(openDb(':memory:'));
+  const { tenantId: tid } = seedDemo(svc);
+  const r = svc.startIntake(tid, { text: 'ZA 123AB, 150 000 km, zákazník Eva Malá, závada: klepe podvozok' });
+  assert.equal(r.knownVehicle, true);
+  assert.equal(r.data.customerName, 'Eva Malá');
+  assert.equal(r.data.customerPhone, undefined, 'old owner phone must not be copied');
+  assert.equal(r.complete, false);
+  svc.updateIntake(tid, r.ref, { fields: { customerPhone: '+421 905 111 222' } });
+  const done = svc.completeIntake(tid, r.ref);
+  const v = svc.vehicle(tid, done.vehicleId);
+  assert.equal(svc.customer(tid, v.customerId).name, 'Eva Malá');
+});
+
 test('intake parser: make/model/year, section boundaries, "kontrolky žiadne", Škoda vs škoda', () => {
   const a = parseIntakeText('osobné auto ZA 999ZZ, Škoda Octavia 2019 diesel, 54 tisíc km, nádrž pol, kontrolky žiadne, zákazník Eva Malá 0905 123 456, závada: hučí predné koleso, poškodenie: odreté ľavé zrkadlo, dva kľúče', { country: 'SK' }).fields;
   assert.equal(a.make, 'Škoda'); assert.equal(a.model, 'Octavia'); assert.equal(a.year, 2019);
