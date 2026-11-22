@@ -3,7 +3,7 @@ export const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&a
 const CSS = `:root{--fg:#1b1f24;--muted:#5b6470;--line:#dde1e6;--acc:#0b6bcb;--bg:#fff;--red:#c62828;--amber:#b26a00;--green:#2e7d32}
 @media (prefers-color-scheme:dark){:root{--fg:#e8eaed;--muted:#a0a8b3;--line:#3a3f45;--bg:#15181b}}
 *{box-sizing:border-box}body{margin:0;font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:var(--fg);background:var(--bg)}
-main{max-width:640px;margin:0 auto;padding:24px 16px 48px}h1{font-size:1.5rem;margin:.2em 0 .6em}h2{font-size:1.15rem;margin-top:1.6em}
+main{max-width:640px;margin:0 auto;padding:24px max(16px,env(safe-area-inset-right)) max(48px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left))}body{overflow-wrap:anywhere;-webkit-text-size-adjust:100%}button{min-height:44px}h1 .logo{width:40px;height:40px;vertical-align:-8px;margin-right:10px;border-radius:10px;box-shadow:0 4px 10px rgba(0,0,0,.25);animation:spin3d 1s cubic-bezier(.2,.8,.2,1) both}@keyframes spin3d{0%{transform:perspective(400px) rotateY(-180deg) scale(.5);opacity:0}60%{transform:perspective(400px) rotateY(15deg) scale(1.2);opacity:1}100%{transform:perspective(400px) rotateY(0) scale(1)}}@media (prefers-reduced-motion:reduce){h1 .logo{animation:none}}td,th{word-break:break-word}h1{font-size:1.5rem;margin:.2em 0 .6em}h2{font-size:1.15rem;margin-top:1.6em}
 label{display:block;margin:12px 0;font-weight:600}input,select,textarea{display:block;width:100%;margin-top:4px;padding:10px;border:1px solid var(--line);border-radius:8px;font:inherit;background:transparent;color:inherit}
 button{background:var(--acc);color:#fff;border:0;border-radius:8px;padding:12px 18px;font:inherit;font-weight:600;cursor:pointer}button.secondary{background:transparent;color:var(--acc);border:1px solid var(--acc)}
 .muted{color:var(--muted)}.small{font-size:.85rem}.err{color:var(--red);font-weight:600}.card{border:1px solid var(--line);border-radius:12px;padding:14px;margin:12px 0}
@@ -13,6 +13,6 @@ button{background:var(--acc);color:#fff;border:0;border-radius:8px;padding:12px 
 export function page(title, body, { lang = 'en', head = '', noTranslate = false } = {}) {
   // noTranslate: app screens are already localised; stops browsers auto-translating the brand (e.g. Chrome rendering an English-looking brand as a translated word).
   const nt = noTranslate ? ' translate="no"' : '';
-  return `<!doctype html><html lang="${esc(lang)}"${nt}><head>${noTranslate ? '<meta name="google" content="notranslate">' : ''}<meta charset="utf-8"><link rel="icon" href="/favicon.svg" type="image/svg+xml"><meta name="viewport" content="width=device-width,initial-scale=1">
+  return `<!doctype html><html lang="${esc(lang)}"${nt}><head>${noTranslate ? '<meta name="google" content="notranslate">' : ''}<meta charset="utf-8"><link rel="icon" href="/favicon.svg" type="image/svg+xml"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><link rel="apple-touch-icon" href="/logo.svg">
 <title>${esc(title)}</title><meta name="robots" content="noindex"><style>${CSS}</style>${head}</head><body><main>${body}</main></body></html>`;
 }

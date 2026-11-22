@@ -6,16 +6,20 @@ export const WIDGET_URI = 'ui://garagee/widget-v4.html';
 export const WIDGET_HTML = `<!doctype html><html translate="no"><head><meta name="google" content="notranslate"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <style>
 :root{color-scheme:light dark;--line:rgba(127,127,127,.3);--muted:rgba(127,127,127,1);--acc:#0b6bcb}
-body{margin:0;font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:transparent}
+body{overflow-wrap:anywhere;-webkit-text-size-adjust:100%;margin:0;font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:transparent}
 .wrap{padding:12px}.h{font-weight:700;font-size:15px;margin:0 0 8px}.muted{color:var(--muted);font-size:12px}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
 .card{border:1px solid var(--line);border-radius:10px;padding:10px}.big{font-size:16px;font-weight:700}
 button{margin-top:8px;background:var(--acc);color:#fff;border:0;border-radius:8px;padding:7px 12px;font:inherit;font-weight:600;cursor:pointer}
-button[disabled]{opacity:.5;cursor:default}
+button[disabled]{opacity:.5;cursor:default}button{min-height:40px}td,th{word-break:break-word}
+.brand{display:flex;align-items:center;gap:8px;font-weight:700;font-size:13px;color:var(--muted);margin:12px 12px 0}
+.brand svg{width:24px;height:24px;border-radius:6px;box-shadow:0 3px 8px rgba(0,0,0,.25);animation:spin3d 1s cubic-bezier(.2,.8,.2,1) both}
+@keyframes spin3d{0%{transform:perspective(300px) rotateY(-180deg) scale(.5);opacity:0}60%{transform:perspective(300px) rotateY(15deg) scale(1.2);opacity:1}100%{transform:perspective(300px) rotateY(0) scale(1)}}
+@media (prefers-reduced-motion:reduce){.brand svg{animation:none}}
 table{width:100%;border-collapse:collapse}td,th{padding:5px 4px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}td.r,th.r{text-align:right}
 .bar{height:8px;border-radius:4px;background:var(--line);overflow:hidden}.bar>i{display:block;height:100%;background:var(--acc)}
 .red{color:#c62828}.amber{color:#b26a00}.green{color:#2e7d32}
-</style></head><body><div class="wrap" id="root"><div class="muted">Garagee…</div></div>
+</style></head><body><div class="brand" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"> <rect rx="112" fill="#0B6BCB"/> <path d="M368 162A140 140 0 1 0 396 256H346" fill="none" stroke="#fff" stroke-width="56" stroke-linecap="round" stroke-linejoin="round"/> <circle cx="256" cy="256" r="46" fill="#fff"/> <g stroke="#fff" stroke-width="18" stroke-linecap="round">  <path d="M256 210V150M216 233l-52-30M216 279l-52 30M256 302v60"/> </g> <circle cx="256" cy="256" r="16" fill="#0B6BCB"/></svg>Garagee</div><div class="wrap" id="root"><div class="muted">Garagee…</div></div>
 <script>
 (function(){
   var root=document.getElementById('root'); var reqId=1; var pending={};
