@@ -29,7 +29,7 @@ export function publicRouter(svc, { baseUrl, provider }) {
   r.get('/', (req, res) => {
     const lang = webLang(req); const t = webT(lang); const q = lang === 'en' ? '' : `?lang=${lang}`;
     res.type('html').send(page('Garagee', `${langBar('/', lang)}
-    <h1 translate="no"><img class="logo" src="/logo.svg" alt="">Garagee</h1><p>${t('tagline')}</p>
+    <h1 translate="no"><span class="spin"><img src="/logo.svg" alt=""><i class="sp"></i><i class="sp"></i><i class="sp"></i></span>Garagee</h1><p>${t('tagline')}</p>
     <p class="muted">${t('langs', { n: LANGUAGES.length })}</p>
     <p><a href="/signup${q}"><b>${t('create')}</b></a> · <a href="/app">${t('tablet')}</a> · <a href="/plans${q}">${t('plans')}</a></p>
     ${footer(t, lang)}`, { lang }));
